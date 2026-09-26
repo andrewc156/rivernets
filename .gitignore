@@ -1,0 +1,79 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+# ==============================================================================
+# JUPYTER NOTEBOOKS
+# ==============================================================================
+# Ignore auto-saved notebook checkpoints and recovery backups
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+%notebook_profile%
+
+# Optional: Ignore large or raw dataset directories you store locally
+# data/
+# inputs/
+
+# ==============================================================================
+# VISUAL STUDIO CODE (VS CODE)
+# ==============================================================================
+# Ignore the local workspace configurations, histories, and local extensions
+.vscode/
+.history/
+*.code-workspace
+
+# Optional: If you WANT to share team launch configurations/tasks, uncomment below:
+# !.vscode/launch.json
+# !.vscode/tasks.json
+# !.vscode/settings.json
+
+# ==============================================================================
+# PYTHON & ENVIRONMENTS
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local virtual environments (standard names)
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Package management, distributions, and build artifacts
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==============================================================================
+# SYSTEM FILES & LOGS
+# ==============================================================================
+# Operating system specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and runtime caches
+*.log
+.pytest_cache/
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+
+#Custom for Large Data and other Large Files
+merit_colorado_dir_native.tif
+merit_colorado_float_native.tif
