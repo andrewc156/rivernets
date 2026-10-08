@@ -1,0 +1,29 @@
+wq_station,DO concentration,DO saturation,Discharge,Specific conductance,Stage,Turbidity,Water temperature,fDOM/CDOM,pH,Nitrate,Chlorophyll-a,core_count,has_hydrology,distance_to_river_m,latitude,longitude,region,station_class,selected_support_gauge,support_direction,support_distance_km,hydrology_source
+USGS-09070500,True,False,True,True,True,True,True,False,True,False,False,5,True,49.80609304590519,39.6446111111111,-107.078013888889,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09071750,True,False,False,True,False,True,True,True,True,False,False,5,False,75.55242024928671,39.5588711336553,-107.290887364938,Top half,Tier C - 4+/5 no hydrology,USGS-09085100,downstream,6.414473624916565,support gauge
+USGS-09085000,True,False,True,True,True,True,True,False,True,False,False,5,True,199.80598486798053,39.54666666666667,-107.33083333333333,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09085150,True,False,False,True,False,True,True,False,True,False,False,5,False,0.037355573289872594,39.561667,-107.406667,Top half,Tier C - 4+/5 no hydrology,USGS-09085500,downstream,4.2063398378328385,support gauge
+USGS-09085160,True,False,False,True,False,True,True,False,True,False,False,5,False,31.129636459376716,39.56527777777777,-107.41722222222222,Top half,Tier C - 4+/5 no hydrology,USGS-09085500,downstream,3.095421989057457,support gauge
+USGS-09092570,True,False,True,True,True,True,True,False,True,False,False,5,True,3.3181710641581313e-07,39.494167,-107.938333,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09095500,True,False,True,True,True,True,True,False,True,False,False,5,True,2.281560199154062,39.2391463104219,-108.266194581311,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09106485,True,False,True,True,True,False,True,False,False,False,False,3,True,46.7003705504378,39.05458333333333,-108.5411111111111,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09144250,True,False,True,True,True,True,True,False,True,False,False,5,True,24.82770207609047,38.7530394388892,-108.078403073262,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09152500,True,False,True,True,True,True,True,False,True,False,False,5,True,16.313105056726027,38.9833157504816,-108.450644642269,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09163500,True,False,True,True,True,True,True,False,True,False,False,5,True,101.1188285869377,39.13274340153019,-109.02707585203304,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09180000,False,False,True,True,True,False,True,False,False,False,False,2,True,60.68038472065049,38.7972080512614,-109.195114164408,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09180500,True,False,True,True,True,True,True,False,True,False,False,5,True,68.90533750791802,38.8105409546215,-109.293449329319,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09217000,False,False,True,True,True,False,True,False,False,False,False,2,True,15.698613211413893,41.5163221339525,-109.449057906948,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09234500,False,False,True,True,True,False,True,False,False,False,False,2,True,34.886153042939256,40.908292959641,-109.422914017045,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09261000,True,False,True,True,True,True,True,False,True,False,False,5,True,89.98377046256505,40.40871944444444,-109.2352361111111,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09306500,False,False,True,True,True,False,True,False,False,False,False,2,True,34.777436417535064,39.9788562909219,-109.1787268574,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09315000,True,False,True,True,True,True,True,False,True,False,False,5,True,117.53637897346427,38.98886944444445,-110.15035555555556,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09328960,False,False,True,True,True,False,True,False,False,False,False,2,True,17.877048099974818,38.0100194444444,-110.073538888889,Top half,Tier D - partial WQ + hydrology,,,,local
+USGS-09365000,False,False,True,True,True,True,True,False,True,False,False,4,True,52.10906603485107,36.7230166666667,-108.225588888889,Bottom half,Tier B - 4/5 + hydrology,,,,local
+USGS-09368000,False,False,True,True,True,True,True,False,True,False,False,4,True,19.28054118889505,36.7766666666667,-108.683055555556,Bottom half,Tier B - 4/5 + hydrology,,,,local
+USGS-09371010,False,False,True,True,True,True,True,False,True,False,False,4,True,50.21469923170594,37.00113888888889,-109.02958333333333,Top half,Tier B - 4/5 + hydrology,,,,local
+USGS-09379500,True,False,True,True,True,True,True,False,True,False,False,5,True,12.302434383604474,37.1506777777778,-109.866688888889,Top half,Tier A - 5/5 + hydrology,,,,local
+USGS-09380000,True,False,True,True,True,True,True,False,True,False,False,5,True,74.69461944037641,36.864333333333335,-111.58787222222222,Bottom half,Tier A - 5/5 + hydrology,,,,local
+USGS-09404200,False,False,True,True,True,False,True,False,False,False,False,2,True,29.792825337848026,35.7735994280541,-113.363543958913,Bottom half,Tier D - partial WQ + hydrology,,,,local
+USGS-09429490,True,True,False,True,False,False,True,False,True,False,False,4,False,98.62957048014803,32.8849361111111,-114.468111111111,Bottom half,Tier C - 4+/5 no hydrology,USGS-09523000,downstream,2.0845371511091226,support gauge
+USGS-09510000,True,True,True,True,True,False,True,False,True,False,False,4,True,88.15509317291665,33.808289,-111.661911,Bottom half,Tier B - 4/5 + hydrology,,,,local
+USGS-393259107194801,True,False,False,True,True,True,True,False,True,False,False,5,True,62.44569094413924,39.54975,-107.3301,Top half,Tier A - 5/5 + hydrology,,,,local
