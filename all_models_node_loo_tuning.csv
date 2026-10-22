@@ -1,0 +1,102 @@
+Target,heldout_node,seasonal_alpha,quadratic_alpha,gb_learning_rate,gb_leaf_nodes,gb_l2,graph_scheme,graph_lambda,graph_beta
+DO concentration,67739434,1.0,0.3,0.1,7,10.0,width,10.0,0.1
+DO concentration,81497938,1.0,0.3,0.03,7,1.0,width,10.0,0.1
+DO concentration,82982643,1.0,0.3,0.1,7,10.0,width,10.0,0.1
+DO concentration,83027786,1.0,0.3,0.1,7,10.0,width,10.0,0.1
+DO concentration,83222751,1.0,0.3,0.1,7,10.0,width,10.0,0.1
+DO concentration,84197086,1.0,1.0,0.03,7,1.0,width,10.0,0.3
+DO concentration,88786999,1.0,0.3,0.03,7,0.1,width,10.0,0.1
+DO concentration,90706215,1.0,1.0,0.1,7,10.0,width,10.0,0.3
+DO concentration,92116891,1.0,1.0,0.03,15,1.0,width,10.0,0.03
+DO concentration,93300040,1.0,0.3,0.05,7,0.1,width,10.0,0.1
+DO concentration,93392084,1.0,0.3,0.03,15,0.1,width,10.0,0.1
+DO concentration,96496279,1.0,0.3,0.03,7,0.1,width,10.0,0.1
+DO concentration,97532807,1.0,0.3,0.1,7,10.0,width,10.0,0.1
+DO concentration,126377584,1.0,0.3,0.1,7,10.0,distance_only,0.3,0.1
+DO concentration,131520862,0.3,0.3,0.1,7,10.0,area_width,1.0,0.03
+DO concentration,186559442,1.0,0.1,0.1,7,10.0,area_width,100.0,0.1
+DO concentration,203177183,1.0,1.0,0.1,15,10.0,area_width,100.0,0.3
+Water temperature,47787846,0.3,100.0,0.03,7,10.0,slope,100.0,10.0
+Water temperature,58738608,0.3,100.0,0.03,7,10.0,slope,100.0,10.0
+Water temperature,67739434,0.3,100.0,0.03,7,10.0,area_width,30.0,10.0
+Water temperature,75465016,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,81497938,0.3,100.0,0.03,7,10.0,slope,100.0,10.0
+Water temperature,82982643,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,83027786,0.3,100.0,0.03,7,10.0,slope,100.0,10.0
+Water temperature,83222751,0.3,100.0,0.03,7,10.0,slope,100.0,10.0
+Water temperature,84197086,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,88786999,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,90706215,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,92116891,1.0,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,93300040,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,93392084,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,96496279,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,96751415,0.001,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,97532807,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,110911305,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,126377584,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,131520862,0.3,100.0,0.03,7,10.0,area,30.0,10.0
+Water temperature,133114453,0.3,100.0,0.03,7,10.0,area_width,10.0,10.0
+Water temperature,134075067,0.3,100.0,0.03,7,10.0,area_width,10.0,10.0
+Water temperature,186559442,0.3,100.0,0.03,7,10.0,area_width,30.0,10.0
+Water temperature,203177183,0.03,100.0,0.03,7,10.0,area,100.0,10.0
+pH,67739434,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,81497938,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,82982643,10.0,30.0,0.03,7,1.0,distance_only,0.01,10.0
+pH,83027786,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,83222751,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,84197086,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,88786999,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,90706215,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,93300040,10.0,100.0,0.05,15,10.0,distance_only,0.01,10.0
+pH,93392084,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,96496279,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,97532807,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,126377584,10.0,100.0,0.03,7,10.0,distance_only,0.01,10.0
+pH,129078768,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,131520862,3.0,100.0,0.03,7,1.0,distance_only,0.01,10.0
+pH,133114453,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,134075067,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+pH,186559442,10.0,100.0,0.03,15,10.0,distance_only,0.01,1.0
+pH,203177183,10.0,100.0,0.03,15,10.0,distance_only,0.01,10.0
+Specific conductance,47787846,1.0,30.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,58738608,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,67739434,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,75465016,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,81497938,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,82982643,1.0,30.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,83027786,1.0,30.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,83222751,1.0,30.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,84197086,1.0,10.0,0.03,15,10.0,area_width,1.0,10.0
+Specific conductance,88786999,1.0,30.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,90706215,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,92116891,1.0,10.0,0.03,7,10.0,area_width,1.0,10.0
+Specific conductance,93300040,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,93392084,1.0,10.0,0.03,15,10.0,area,10.0,10.0
+Specific conductance,96496279,1.0,30.0,0.03,15,10.0,area_width,0.3,10.0
+Specific conductance,96751415,1.0,30.0,0.03,7,10.0,area_width,0.01,10.0
+Specific conductance,97532807,1.0,10.0,0.03,15,10.0,area,10.0,10.0
+Specific conductance,110911305,1.0,10.0,0.03,15,10.0,area_width,0.01,10.0
+Specific conductance,126377584,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,131520862,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,133114453,1.0,10.0,0.03,15,10.0,area_width,0.01,10.0
+Specific conductance,134075067,1.0,10.0,0.03,15,10.0,area_width,3.0,10.0
+Specific conductance,186559442,0.3,30.0,0.03,15,10.0,area_width,0.01,10.0
+Specific conductance,203177183,10.0,30.0,0.03,15,10.0,area_width,0.01,10.0
+Turbidity,67739434,3.0,10.0,0.1,15,1.0,width,30.0,10.0
+Turbidity,81497938,3.0,10.0,0.03,7,0.1,width,30.0,10.0
+Turbidity,82982643,3.0,10.0,0.1,7,0.1,width,30.0,10.0
+Turbidity,83027786,3.0,10.0,0.1,7,1.0,width,30.0,10.0
+Turbidity,83222751,3.0,10.0,0.05,7,1.0,width,30.0,10.0
+Turbidity,84197086,3.0,10.0,0.03,7,0.1,width,30.0,10.0
+Turbidity,88786999,3.0,10.0,0.1,7,1.0,width,30.0,10.0
+Turbidity,90706215,3.0,10.0,0.1,15,1.0,width,30.0,10.0
+Turbidity,93300040,3.0,10.0,0.1,7,1.0,width,30.0,10.0
+Turbidity,93392084,3.0,10.0,0.1,15,1.0,width,30.0,10.0
+Turbidity,96496279,3.0,10.0,0.1,15,1.0,width,30.0,10.0
+Turbidity,97532807,3.0,10.0,0.1,15,1.0,width,30.0,10.0
+Turbidity,126377584,3.0,10.0,0.1,15,1.0,area_width,30.0,10.0
+Turbidity,129078768,10.0,30.0,0.03,15,10.0,area,100.0,10.0
+Turbidity,131520862,3.0,10.0,0.1,15,1.0,area,30.0,10.0
+Turbidity,133114453,10.0,30.0,0.03,7,10.0,area_width,30.0,10.0
+Turbidity,134075067,3.0,10.0,0.03,7,0.1,width,0.01,10.0
