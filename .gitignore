@@ -74,10 +74,4 @@ desktop.ini
 .ruff_cache/
 
 
-#Custom for Large Data and other Large Files
-merit_colorado_dir_native.tif
-merit_colorado_float_native.tif
-
-merit_chatt_dir_native.tif
-merit_chatt_float_native.tif
 
