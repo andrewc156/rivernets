@@ -18,8 +18,8 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 RANDOM_STATE = 42
 
-BENCHMARK_DIR = Path("benchmark_data")
-RESULTS_DIR = Path("benchmark_results")
+BENCHMARK_DIR = Path("data/benchmark_data")
+RESULTS_DIR = Path("results/benchmark_results")
 
 RESULTS_DIR.mkdir(exist_ok=True)
 
