@@ -1,0 +1,72 @@
+name: Test map site
+
+# Runs tests/test_index_html.py whenever the site, the graphs it is built from,
+# or the tests themselves change. Can also be started by hand from the Actions tab.
+on:
+  push:
+    paths:
+      - "index.html"
+      - "graphs/**"
+      - "tests/**"
+      - "pytest.ini"
+      - "Interactive_River_Network_Map_Toggle.ipynb"
+      - ".github/workflows/test-site.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "graphs/**"
+      - "tests/**"
+      - "pytest.ini"
+      - "Interactive_River_Network_Map_Toggle.ipynb"
+      - ".github/workflows/test-site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: test-site-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Only the graphs the tests read (~9 MB) — not the multi-GB rasters also stored in LFS.
+  # Keep in sync with RIVERS in tests/test_index_html.py.
+  LFS_FILES: >-
+    graphs/colorado/master_compressed_river_graph.pkl,graphs/colorado/largest_river_component.pkl,graphs/chattahoochee/chattahoochee_structural_2025.pkl,graphs/chattahoochee/chattahoochee_full_2025.pkl
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out (without LFS files)
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      # Cache the LFS objects so repeat runs don't use GitHub's LFS bandwidth quota
+      - name: List needed LFS objects
+        run: git lfs ls-files -l -I "$LFS_FILES" | cut -d ' ' -f 1 | sort > .lfs-ids
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+
+      - name: Download graph files from LFS
+        run: |
+          git lfs pull --include "$LFS_FILES"
+          ls -la graphs/colorado graphs/chattahoochee | grep -E '\.pkl$' || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest networkx numpy playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run tests
+        run: python -m pytest -v -rs

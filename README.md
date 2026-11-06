@@ -18,3 +18,17 @@ figures/           plots (.png) and the interactive map HTML
 docs/              slides (beamer PDF)
 share/             bundles prepared for sharing with the lab
 ```
+
+## Map site (`index.html`)
+
+Built by `Interactive_River_Network_Map_Toggle.ipynb` (Colorado & Chattahoochee,
+compressed ⇄ uncompressed). After rebuilding it, run the tests:
+
+```
+python -m pytest                   # all 28 tests (~25 s)
+python -m pytest -m "not browser"  # static checks only (~2 s)
+```
+
+Needs `pytest` and `networkx`; the browser tests also need Playwright
+(`pip install playwright && playwright install chromium`) and an internet connection,
+and are skipped without them. The Anaconda Python on this machine already has everything.
