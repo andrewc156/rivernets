@@ -1,6 +1,9 @@
 # Imports
 from pathlib import Path
 import json
+import os
+import pickle
+from collections import defaultdict
 import warnings
 
 import numpy as np
@@ -19,9 +22,23 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 RANDOM_STATE = 42
 
 BENCHMARK_DIR = Path("data/benchmark_data")
-RESULTS_DIR = Path("results/benchmark_results")
+RESULTS_DIR = Path(
+    os.environ.get(
+        "BENCHMARK_RESULTS_DIR",
+        "results/benchmark_results"
+    )
+)
 
-RESULTS_DIR.mkdir(exist_ok=True)
+MASTER_GRAPH_FILE = Path("graphs/colorado/master_compressed_river_graph.pkl")
+
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Optional run subsets for quick checks, e.g.
+#   BENCHMARK_TARGETS="pH" BENCHMARK_MODELS="Graph-Laplacian,OLS" \
+#   BENCHMARK_RESULTS_DIR=/tmp/bench python water_quality_model_benchmark.py
+# Leave them unset for the full benchmark.
+RUN_TARGETS = [t for t in os.environ.get("BENCHMARK_TARGETS", "").split(",") if t]
+RUN_MODELS = [m for m in os.environ.get("BENCHMARK_MODELS", "").split(",") if m]
 
 print("Benchmark data:", BENCHMARK_DIR.resolve())
 print("Results:", RESULTS_DIR.resolve())
@@ -85,6 +102,180 @@ if settings_path.exists():
     print("Graph settings loaded.")
 else:
     print("No graph settings file found.")
+
+
+# Graph-Laplacian Model
+#
+# Fitted inside benchmark_target_nested_loo, on exactly the same rows,
+# predictors and outer/inner folds as every other model.
+#
+#   y_it = b0 + z_it' b + g_i
+#   minimise  sum_i (1/n_i) sum_t (y_it - b0 - z_it' b - g_i)^2
+#             + lambda_beta * |b|^2 + lambda * g' L_eff g,   sum_i g_i = 0
+#
+# L_eff is one of the five scaled Kron-reduced Laplacians saved by
+# largest_uncompressed_laplacian.ipynb (effective_laplacians_clean.pkl).
+# The weighting scheme, lambda and lambda_beta are tuned by the inner LOO.
+# Kron reduction is exact: refitting with the full 67,401-node Laplacian
+# gives the same R2 to 1e-10 (reports/kron_vs_full_laplacian_report.tex).
+GRAPH_MODEL_NAME = "Graph-Laplacian"
+
+if GRAPH_LAMBDA_GRID is None or GRAPH_BETA_GRID is None:
+    raise FileNotFoundError(
+        "graph_settings.json is needed for the Graph-Laplacian model."
+    )
+
+with open(BENCHMARK_DIR / "effective_laplacians_clean.pkl", "rb") as f:
+    EFFECTIVE_LAPLACIANS = {
+        name: np.asarray(L, dtype=float)
+        for name, L in pickle.load(f).items()
+    }
+
+# Rows/columns of every effective Laplacian follow the sorted WQ node ids
+# (boundary_nodes in largest_uncompressed_laplacian.ipynb).
+with open(MASTER_GRAPH_FILE, "rb") as f:
+    _G_master = pickle.load(f)
+
+GRAPH_NODES = sorted(
+    node
+    for node, data in _G_master.nodes(data=True)
+    if data.get("usgs_station_count", 0) > 0
+    or len(data.get("usgs_clusters", [])) > 0
+)
+GRAPH_NODE_INDEX = {int(node): i for i, node in enumerate(GRAPH_NODES)}
+
+for _name, _L in EFFECTIVE_LAPLACIANS.items():
+    if _L.shape != (len(GRAPH_NODES), len(GRAPH_NODES)):
+        raise ValueError(f"Laplacian {_name} does not match the {len(GRAPH_NODES)} WQ nodes.")
+
+print(
+    "Graph-Laplacian:",
+    len(EFFECTIVE_LAPLACIANS), "weightings |",
+    len(GRAPH_NODES), "WQ nodes"
+)
+
+
+def graph_node_stats(df, target, features):
+    """Per-node moments; every graph fit and MSE below is exact from these."""
+    stats = {}
+    for node, group in df.groupby("node"):
+        X = group[features].to_numpy(dtype=float)
+        y = group[target].to_numpy(dtype=float)
+        n = len(group)
+        stats[int(node)] = {
+            "mean_x": X.mean(axis=0),
+            "exx": X.T @ X / n,
+            "exy": X.T @ y / n,
+            "mean_y": y.mean(),
+            "mean_y2": np.mean(y ** 2),
+        }
+    return stats
+
+
+def _graph_standard_moments(stat, mean_x, std_x):
+    mx, exx, exy, my = stat["mean_x"], stat["exx"], stat["exy"], stat["mean_y"]
+    zmean = (mx - mean_x) / std_x
+    zexx = (
+        exx - np.outer(mx, mean_x) - np.outer(mean_x, mx) + np.outer(mean_x, mean_x)
+    ) / np.outer(std_x, std_x)
+    zexy = (exy - mean_x * my) / std_x
+    p = len(mean_x)
+    q2 = np.empty((p + 1, p + 1))
+    q2[0, 0] = 1.0
+    q2[0, 1:] = q2[1:, 0] = zmean
+    q2[1:, 1:] = zexx
+    return np.concatenate(([1.0], zmean)), q2, np.concatenate(([my], zexy))
+
+
+def _graph_train_moments(stats, train_nodes):
+    # standardise with equal weight per training node
+    mean_x = np.mean([stats[n]["mean_x"] for n in train_nodes], axis=0)
+    ex2 = np.mean([np.diag(stats[n]["exx"]) for n in train_nodes], axis=0)
+    std_x = np.sqrt(np.maximum(ex2 - mean_x ** 2, 1e-12))
+    q = len(mean_x) + 1
+    A11, rb, qmean = np.zeros((q, q)), np.zeros(q), {}
+    for n in train_nodes:
+        qm, q2, qy = _graph_standard_moments(stats[n], mean_x, std_x)
+        A11 += q2
+        rb += qy
+        qmean[n] = qm
+    return {
+        "mean_x": mean_x, "std_x": std_x, "q": q, "A11": A11, "rb": rb,
+        "qmean": qmean, "mean_y": {n: stats[n]["mean_y"] for n in train_nodes},
+    }
+
+
+def _graph_prepare(tm, L, lam):
+    """Eliminate g from the full system with one solve of diag(mask) + lam*L,
+    shared across the lambda_beta grid."""
+    N, q = L.shape[0], tm["q"]
+    Bt, rg, mask = np.zeros((N, q)), np.zeros(N), np.zeros(N)
+    for n, qm in tm["qmean"].items():
+        j = GRAPH_NODE_INDEX[n]
+        Bt[j] += qm
+        mask[j] = 1.0
+        rg[j] = tm["mean_y"][n]
+    c = np.ones(N)                                   # gauge: sum of g = 0
+    sol = np.linalg.solve(np.diag(mask) + lam * L, np.column_stack((Bt, rg, c)))
+    X, u, v = sol[:, :q], sol[:, q], sol[:, q + 1]
+    return {"tm": tm, "X": X, "u": u, "v": v, "BtX": Bt.T @ X, "Btu": Bt.T @ u,
+            "Btv": Bt.T @ v, "cX": c @ X, "cu": c @ u, "cv": c @ v}
+
+
+def _graph_solve(prep, lambda_beta):
+    tm, q = prep["tm"], prep["tm"]["q"]
+    ridge = np.eye(q)
+    ridge[0, 0] = 0.0                                # intercept not penalised
+    S = np.empty((q + 1, q + 1))
+    S[:q, :q] = tm["A11"] + lambda_beta * ridge - prep["BtX"]
+    S[:q, q] = -prep["Btv"]
+    S[q, :q] = prep["cX"]
+    S[q, q] = prep["cv"]
+    z = np.linalg.solve(S, np.concatenate((tm["rb"] - prep["Btu"], [prep["cu"]])))
+    beta, mu = z[:q], z[q]
+    return {"beta": beta, "g": prep["u"] - prep["X"] @ beta - prep["v"] * mu,
+            "mean_x": tm["mean_x"], "std_x": tm["std_x"]}
+
+
+def _graph_coef(model, node):
+    coef = model["beta"].copy()
+    coef[0] += model["g"][GRAPH_NODE_INDEX[int(node)]]
+    return coef
+
+
+def _graph_node_mse(stat, model, node):
+    _, q2, qy = _graph_standard_moments(stat, model["mean_x"], model["std_x"])
+    coef = _graph_coef(model, node)
+    return max(float(stat["mean_y2"] - 2.0 * coef @ qy + coef @ q2 @ coef), 0.0)
+
+
+def fit_predict_graph_laplacian(outer_train, outer_test, target, features):
+    """Inner-LOO tuning of (weighting, lambda, lambda_beta), refit on the outer
+    training nodes, predict the held-out node. Same selection criterion as
+    tune_model_inner_loo: the mean of the per-node validation MSE."""
+    stats = graph_node_stats(outer_train, target, features)
+    train_nodes = sorted(stats)
+    totals = defaultdict(float)
+    for val_node in train_nodes:
+        tm = _graph_train_moments(stats, [n for n in train_nodes if n != val_node])
+        for scheme, L in EFFECTIVE_LAPLACIANS.items():
+            for lam in GRAPH_LAMBDA_GRID:
+                prep = _graph_prepare(tm, L, float(lam))
+                for lb in GRAPH_BETA_GRID:
+                    model = _graph_solve(prep, float(lb))
+                    totals[(scheme, float(lam), float(lb))] += _graph_node_mse(
+                        stats[val_node], model, val_node
+                    )
+    scores = {k: t / len(train_nodes) for k, t in totals.items()}
+    scheme, lam, lb = min(scores, key=scores.get)
+    model = _graph_solve(
+        _graph_prepare(_graph_train_moments(stats, train_nodes), EFFECTIVE_LAPLACIANS[scheme], lam), lb
+    )
+    test_node = outer_test["node"].iloc[0]
+    Z = (outer_test[features].to_numpy(dtype=float) - model["mean_x"]) / model["std_x"]
+    pred = np.column_stack((np.ones(len(Z)), Z)) @ _graph_coef(model, test_node)
+    best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb}
+    return best_params, scores[(scheme, lam, lb)], pred
 
 
 # Fourier Helpers
@@ -702,7 +893,8 @@ def benchmark_target_nested_loo(
             "Elastic Net",
             "Spline GAM",
             "Random Forest",
-            "Gradient Boosting"
+            "Gradient Boosting",
+            GRAPH_MODEL_NAME
         ]
 
     required = [
@@ -808,65 +1000,80 @@ def benchmark_target_nested_loo(
 
         for model_name in model_names:
 
-            (
-                best_params,
-                inner_mse
-            ) = (
-                tune_model_inner_loo(
-                    outer_train=
-                        outer_train,
-                    target=
-                        target,
-                    features=
-                        features,
-                    model_name=
-                        model_name,
-                    node_col=
-                        node_col
-                )
-            )
+            if model_name == GRAPH_MODEL_NAME:
 
-            X_train = (
-                outer_train[
-                    features
-                ]
-                .to_numpy()
-            )
-
-            y_train = (
-                outer_train[
-                    target
-                ]
-                .to_numpy()
-            )
-
-            train_weights = (
-                equal_node_weights(
+                (
+                    best_params,
+                    inner_mse,
+                    pred
+                ) = fit_predict_graph_laplacian(
                     outer_train,
-                    node_col=
-                        node_col
+                    outer_test,
+                    target,
+                    features
                 )
-            )
 
-            model = (
-                build_benchmark_model(
-                    model_name,
-                    best_params
+            else:
+
+                (
+                    best_params,
+                    inner_mse
+                ) = (
+                    tune_model_inner_loo(
+                        outer_train=
+                            outer_train,
+                        target=
+                            target,
+                        features=
+                            features,
+                        model_name=
+                            model_name,
+                        node_col=
+                            node_col
+                    )
                 )
-            )
 
-            model.fit(
-                X_train,
-                y_train,
-                model__sample_weight=
-                    train_weights
-            )
-
-            pred = (
-                model.predict(
-                    X_test
+                X_train = (
+                    outer_train[
+                        features
+                    ]
+                    .to_numpy()
                 )
-            )
+
+                y_train = (
+                    outer_train[
+                        target
+                    ]
+                    .to_numpy()
+                )
+
+                train_weights = (
+                    equal_node_weights(
+                        outer_train,
+                        node_col=
+                            node_col
+                    )
+                )
+
+                model = (
+                    build_benchmark_model(
+                        model_name,
+                        best_params
+                    )
+                )
+
+                model.fit(
+                    X_train,
+                    y_train,
+                    model__sample_weight=
+                        train_weights
+                )
+
+                pred = (
+                    model.predict(
+                        X_test
+                    )
+                )
 
             for (
                 row_index,
@@ -999,6 +1206,14 @@ def benchmark_target_nested_loo(
 
 
 # Run Benchmarks
+if RUN_TARGETS:
+    TARGET_CONFIGS = {t: TARGET_CONFIGS[t] for t in RUN_TARGETS}
+
+MODEL_NAMES = RUN_MODELS or [*MODEL_CANDIDATES, GRAPH_MODEL_NAME]
+
+print("Targets:", list(TARGET_CONFIGS))
+print("Models:", MODEL_NAMES)
+
 all_benchmark_results = []
 benchmark_predictions = {}
 benchmark_tuning = {}
@@ -1030,7 +1245,9 @@ for target, cfg in TARGET_CONFIGS.items():
             target=
                 target,
             features=
-                cfg["features"]
+                cfg["features"],
+            model_names=
+                MODEL_NAMES
         )
     )
 
@@ -1216,9 +1433,14 @@ benchmark_config = {
     "ridge_alphas":
         RIDGE_ALPHAS,
     "models":
-        list(
-            MODEL_CANDIDATES.keys()
-        ),
+        MODEL_NAMES,
+    "graph_laplacian": {
+        "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)",
+        "weightings": list(EFFECTIVE_LAPLACIANS),
+        "lambda_grid": GRAPH_LAMBDA_GRID,
+        "lambda_beta_grid": GRAPH_BETA_GRID,
+        "tuned_by": "inner leave-one-node-out, same folds and rows as the other models",
+    },
     "validation":
         "Nested leave-one-node-out",
     "training_weighting":
@@ -1290,7 +1512,9 @@ rmse_table.to_csv(
 
 # Best Conventional Models
 best_conventional = (
-    benchmark_results
+    benchmark_results[
+        benchmark_results["Model"] != GRAPH_MODEL_NAME
+    ]
     .sort_values(
         "R2",
         ascending=False
@@ -1384,39 +1608,12 @@ for target in TARGET_CONFIGS:
 
 
 # Graph Results
-graph_path = (
-    RESULTS_DIR
-    / "graph_laplacian_metrics.csv"
+# The Graph-Laplacian model is now fitted inside the benchmark loop above,
+# so it is already in benchmark_results. (Previously its row was read from a
+# hand-made graph_laplacian_metrics.csv, fitted on different rows/features.)
+final_results = (
+    benchmark_results.copy()
 )
-
-if graph_path.exists():
-
-    graph_results = (
-        pd.read_csv(
-            graph_path
-        )
-    )
-
-    final_results = (
-        pd.concat(
-            [
-                benchmark_results,
-                graph_results
-            ],
-            ignore_index=True
-        )
-    )
-
-else:
-
-    final_results = (
-        benchmark_results.copy()
-    )
-
-    print(
-        "Graph-Laplacian benchmark "
-        "has not been added yet."
-    )
 
 
 # Final Table

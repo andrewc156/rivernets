@@ -13,6 +13,7 @@
 \hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
 \setlist{itemsep=2pt, topsep=4pt}
 \usepackage{microtype}
+\setlength{\emergencystretch}{3em}
 \newcommand{\codeus}{\textunderscore\allowbreak}
 \newcommand{\code}[1]{{\ttfamily\let\_\codeus #1}}
 
@@ -267,6 +268,97 @@ Turbidity            & linear &  0.0554 &  0.1954 &  0.1443 & 0.0511 \\
 \end{itemize}
 
 % =====================================================================
+\section{Reconciliation with the Oct 29 and Nov 5 meeting notes}
+
+The model and theory in the meeting notes agree with this report. That includes the objective
+\eqref{eq:model}, the $1/n_i$ weighting, the Kron/Schur derivation, preservation of effective
+resistance, and the compression result. The reported Graph-Laplacian $R^2$ values differ. Every one of
+them was copied from an output cell of \code{largest\_uncompressed\_laplacian.ipynb}.
+Table~\ref{tab:notes} traces each one and gives two corrected values:
+\begin{itemize}
+  \item \textbf{Benchmark refit:} the graph model fitted inside the updated
+        \code{water\_quality\_model\_benchmark.py}, on exactly the same rows, predictors and folds as
+        the conventional models.
+  \item \textbf{Fair:} the value from Table~\ref{tab:selection}, with features selected inside the
+        inner loop.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Graph-Laplacian $R^2$ as reported in the notes, where each value came from, and the
+corrected values.}
+\label{tab:notes}
+\begin{tabular}{lS l S S}
+\toprule
+Target & {Notes} & Source in original notebook & {Benchmark refit} & {Fair} \\
+\midrule
+Water temperature    & 0.8628 & cell 118: reduced static set& 0.8628 & 0.8568 \\
+DO concentration     & 0.7261 & cell 131: DO base set, $K$ tuned& 0.7306 & 0.7009 \\
+Specific conductance & 0.2525 & cell 143: SC base set, $K_{\text{year}}$ tuned & 0.2569 & 0.1403 \\
+pH                   & 0.1316 & cell 67: unscaled Laplacian& 0.1300 & 0.0977 \\
+Turbidity            & 0.0145 & cell 129: other features/rows& 0.0264 & 0.0740 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why the numbers differ.}
+\begin{enumerate}
+  \item \textbf{Post-hoc feature selection.} The Oct 29 notes state that ``the outer held-out node is
+        never used for tuning'' (\S9.1). That holds for $\lambda$, $\lambda_\beta$ and $K$, but not for
+        the static feature sets (\code{REDUCED\_STATIC}, \code{DO\_BASE\_FEATURES},
+        \code{COND\_BASE\_FEATURES}). These were chosen by comparing outer-LOO $R^2$ across candidate
+        sets. This accounts for most of the gap between the notes and the fair values, above all for
+        specific conductance ($0.25 \to 0.14$).
+  \item \textbf{The Nov 5 graph rows were not produced by the benchmark.} The original
+        \code{water\_quality\_model\_benchmark.py} never fitted the graph model. It read its rows from a
+        \code{graph\_laplacian\_metrics.csv}, which does not exist, so the values in the notes were
+        entered by hand.
+  \item \textbf{Turbidity was compared on different data.} The graph row was labelled 90{,}843 rows,
+        but its value ($0.0145$, RMSE $561.81$) comes from a model using specific conductance + pH +
+        $K{=}1$ + slope on 88{,}095 rows. The conventional turbidity models use only slope + $K{=}1$
+        (\code{TURB\_FEATURES}). On those rows and predictors, the graph model scores $0.026$.
+  \item \textbf{Fixed vs tuned $K$.} For DO and specific conductance, the notes' graph values tuned $K$
+        inside the loop, while the conventional models used fixed $K$ ($K{=}2$; $K_{\text{day}}{=}1$,
+        $K_{\text{year}}{=}4$). Refitting the graph model with the same fixed $K$ changes $R^2$ by
+        less than $0.005$.
+  \item \textbf{pH scaling.} The notes' $0.1316$ used the unscaled Laplacian. The scaled value is
+        $0.1300$, a negligible difference.
+\end{enumerate}
+
+\paragraph{Updated benchmark.} \code{water\_quality\_model\_benchmark.py} (and the matching notebook)
+now fits the Graph-Laplacian model inside the same nested LOO as the seven conventional models. It
+uses the five saved Kron Laplacians, with weighting, $\lambda$ and $\lambda_\beta$ tuned by the same
+inner-LOO criterion. Fitting the graph model takes about 20\,s for all five targets.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Nov 5 benchmark: best conventional model vs the Graph-Laplacian model, now fitted on the same
+rows and predictors. The feature sets are those in \code{TARGET\_CONFIGS}, which were chosen post hoc,
+so every model's $R^2$ here is somewhat optimistic.}
+\label{tab:bench}
+\begin{tabular}{l l S S S}
+\toprule
+Target & Best conventional & {$R^2$} & {Graph-Laplacian} & {Notes (graph)} \\
+\midrule
+Water temperature    & Ridge             & 0.8640 & 0.8628 & 0.8628 \\
+DO concentration     & Gradient Boosting & 0.7358 & 0.7306 & 0.7261 \\
+Specific conductance & Spline GAM        & 0.0307 & 0.2569 & 0.2525 \\
+pH                   & Elastic Net       & 0.0226 & 0.1300 & 0.1316 \\
+Turbidity            & Gradient Boosting & 0.3069 & 0.0264 & 0.0145 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The rankings in the Nov 5 notes are unchanged. The graph model is best for specific conductance and
+pH, close to the best for water temperature and DO, and far behind gradient boosting for turbidity.
+What changes is the size of the advantage once feature selection is done fairly
+(Table~\ref{tab:selection}). For specific conductance, the graph model's fair $R^2$ is about $0.14$,
+not $0.25$. The conventional models would also need their feature sets selected inside the loop before
+their numbers can be compared fairly.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -280,6 +372,11 @@ Turbidity            & linear &  0.0554 &  0.1954 &  0.1443 & 0.0511 \\
   \item \textbf{Report the fair numbers.} The fair $R^2$ values in Table~\ref{tab:selection}
         should replace earlier figures. In particular, specific conductance should be reported at
         about $0.14$, not $0.22$--$0.27$.
+  \item \textbf{Use the updated benchmark for model comparisons.} The graph model is now fitted
+        inside \code{water\_quality\_model\_benchmark.py} on the same data as the other models. The
+        hand-entered graph rows in the Nov 5 table should be replaced, in particular turbidity
+        ($0.0145 \to 0.026$). The next step is to choose the benchmark feature sets inside the
+        inner loop, for all models.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -290,6 +387,8 @@ were not among the candidates. In the original they changed predictions by at mo
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
-\code{compare\_kron\_vs\_full\_laplacian.py}.
+\code{compare\_kron\_vs\_full\_laplacian.py}. The benchmark comparison in Table~\ref{tab:bench} comes
+from \code{water\_quality\_model\_benchmark.py}. The graph rows can be rerun on their own with
+\code{BENCHMARK\_MODELS=Graph-Laplacian}.
 
 \end{document}
