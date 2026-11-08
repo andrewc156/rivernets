@@ -38,7 +38,9 @@ consequential is that feature sets chosen by looking at outer-LOO results overst
 by about $0.13$ in $R^2$ for specific conductance and $0.02$--$0.08$ for DO, pH and turbidity.
 With selection done inside the inner loop, the graph term clearly helps for pH and specific
 conductance, while seasonal and MERIT predictors matter much more for water temperature, DO and
-turbidity.
+turbidity. In a full rerun of the eight-model benchmark on identical folds, the graph model ranks
+first for specific conductance and pH, within $0.005$ of the best for water temperature and DO, and
+seventh of eight for turbidity.
 \end{abstract}
 
 % =====================================================================
@@ -331,11 +333,44 @@ now fits the Graph-Laplacian model inside the same nested LOO as the seven conve
 uses the five saved Kron Laplacians, with weighting, $\lambda$ and $\lambda_\beta$ tuned by the same
 inner-LOO criterion. Fitting the graph model takes about 20\,s for all five targets.
 
+\paragraph{Full benchmark rerun.} The complete benchmark (all eight models, all five targets) was
+rerun on the lab server with the updated script. The results are saved in
+\code{results/benchmark\_results/}. Table~\ref{tab:benchfull} gives every model's $R^2$.
+Table~\ref{tab:bench} compares the graph model with the best conventional model and with the value in
+the notes. The graph values from the full run match the graph-only run exactly. The conventional
+models' values are unchanged from the Nov 5 table.
+
 \begin{table}[h]
 \centering
 \small
-\caption{Nov 5 benchmark: best conventional model vs the Graph-Laplacian model, now fitted on the same
-rows and predictors. The feature sets are those in \code{TARGET\_CONFIGS}, which were chosen post hoc,
+\caption{Full benchmark rerun: node-weighted nested-LOO $R^2$ for every model on identical rows,
+predictors and folds. Bold marks the best model for each target. Stations and rows: water temperature
+24 / 144{,}980; DO 17 / 114{,}607; specific conductance 24 / 144{,}980; pH 19 / 121{,}011;
+turbidity 17 / 90{,}843.}
+\label{tab:benchfull}
+\begin{tabular}{l c c c c c}
+\toprule
+Model & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+Graph-Laplacian    & 0.8628 & 0.7306 & \textbf{0.2569} & \textbf{0.1300} & 0.0264 \\
+OLS                & 0.8634 & 0.7305 & $-$0.1242 & 0.0116 & 0.0476 \\
+Ridge              & \textbf{0.8640} & 0.7252 & $-$0.0997 & 0.0130 & 0.0393 \\
+Elastic Net        & 0.8635 & 0.7002 & $-$0.1163 & 0.0226 & 0.0360 \\
+Spline GAM         & 0.8497 & 0.6458 & 0.0307 & 0.0023 & 0.1023 \\
+Random Forest      & 0.7541 & 0.6933 & $-$0.0852 & $-$0.0231 & 0.1003 \\
+Gradient Boosting  & 0.8221 & \textbf{0.7358} & 0.0011 & 0.0035 & \textbf{0.3069} \\
+Dummy              & $-$0.0327 & $-$0.0286 & $-$0.0623 & $-$0.0301 & $-$0.0271 \\
+\midrule
+Graph rank (of 8)  & 4 & 2 & 1 & 1 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Best conventional model vs the Graph-Laplacian model from the full rerun, and the graph value
+reported in the notes. The feature sets are those in \code{TARGET\_CONFIGS}, which were chosen post hoc,
 so every model's $R^2$ here is somewhat optimistic.}
 \label{tab:bench}
 \begin{tabular}{l l S S S}
@@ -351,8 +386,14 @@ Turbidity            & Gradient Boosting & 0.3069 & 0.0264 & 0.0145 \\
 \end{tabular}
 \end{table}
 
-The rankings in the Nov 5 notes are unchanged. The graph model is best for specific conductance and
-pH, close to the best for water temperature and DO, and far behind gradient boosting for turbidity.
+The rankings in the Nov 5 notes are unchanged. The graph model is best for specific conductance
+(by $0.23$ over the next model) and pH (by $0.11$). It is in a near tie with the linear models for
+water temperature: four models fall within $0.0012$ of each other, well inside the noise. It is
+second for DO, $0.005$ behind gradient boosting and level with OLS. For turbidity it ranks seventh,
+ahead only of the dummy model, while gradient boosting reaches $0.31$. Turbidity seems to depend on
+nonlinear effects that neither the linear models nor the graph model capture. The RMSE ranking
+agrees: the graph model has the lowest RMSE for specific conductance (382 vs at least
+437\,\textmu S/cm) and for pH (0.221 vs at least 0.234).
 What changes is the size of the advantage once feature selection is done fairly
 (Table~\ref{tab:selection}). For specific conductance, the graph model's fair $R^2$ is about $0.14$,
 not $0.25$. The conventional models would also need their feature sets selected inside the loop before
@@ -373,10 +414,12 @@ their numbers can be compared fairly.
         should replace earlier figures. In particular, specific conductance should be reported at
         about $0.14$, not $0.22$--$0.27$.
   \item \textbf{Use the updated benchmark for model comparisons.} The graph model is now fitted
-        inside \code{water\_quality\_model\_benchmark.py} on the same data as the other models. The
-        hand-entered graph rows in the Nov 5 table should be replaced, in particular turbidity
-        ($0.0145 \to 0.026$). The next step is to choose the benchmark feature sets inside the
-        inner loop, for all models.
+        inside \code{water\_quality\_model\_benchmark.py} on the same data as the other models, and
+        the full rerun (Table~\ref{tab:benchfull}) replaces the hand-entered graph rows of the
+        Nov 5 table, in particular turbidity ($0.0145 \to 0.026$). It ranks first for
+        specific conductance and pH, is within $0.005$ of the best for water temperature and DO, and is near last for
+        turbidity. The next step is to choose the benchmark feature sets inside the inner loop, for
+        all models.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -387,8 +430,10 @@ were not among the candidates. In the original they changed predictions by at mo
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
-\code{compare\_kron\_vs\_full\_laplacian.py}. The benchmark comparison in Table~\ref{tab:bench} comes
-from \code{water\_quality\_model\_benchmark.py}. The graph rows can be rerun on their own with
+\code{compare\_kron\_vs\_full\_laplacian.py}. The benchmark comparisons in
+Tables~\ref{tab:benchfull} and~\ref{tab:bench} come from a full server run of
+\code{water\_quality\_model\_benchmark.py} (commit \code{33e913b}), saved in
+\code{results/benchmark\_results/}. The graph rows can be rerun on their own with
 \code{BENCHMARK\_MODELS=Graph-Laplacian}.
 
 \end{document}
