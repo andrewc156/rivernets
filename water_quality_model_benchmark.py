@@ -22,10 +22,41 @@ warnings.filterwarnings("ignore", category=ConvergenceWarning)
 RANDOM_STATE = 42
 
 BENCHMARK_DIR = Path("data/benchmark_data")
+# Feature selection
+#   inner (default): in every outer fold, each model picks its feature set
+#       from FEATURE_CANDIDATES (see "Feature Candidates") by inner-LOO MSE
+#       only, so the held-out node never influences which features are used.
+#   fixed: every model uses the hand-picked TARGET_CONFIGS features
+#       (the Nov 5 benchmark).
+# BENCHMARK_FS_K / BENCHMARK_FS_STATIC set the candidate grid.
+# BENCHMARK_FS_SEARCH:
+#   two_stage (default): pick the feature set at a reference setting of each
+#       model, then tune the model's settings on that set. Cost is about
+#       (candidates + settings) inner-LOO passes instead of their product.
+#   joint: search every (feature set, settings) pair.
+# BENCHMARK_INNER_STRIDE=k fits the inner-loop sklearn models on every k-th
+#   hour of each node (outer refits always use all rows). 1 = exact.
+FEATURE_SELECTION = os.environ.get("BENCHMARK_FEATURE_SELECTION", "inner")
+FS_K_VALUES = [int(k) for k in os.environ.get("BENCHMARK_FS_K", "1,2,4").split(",") if k]
+FS_STATIC_OPTIONS = [
+    s for s in os.environ.get("BENCHMARK_FS_STATIC", "none,local_slope,reduced").split(",") if s
+]
+FS_SEARCH = os.environ.get("BENCHMARK_FS_SEARCH", "two_stage")
+INNER_STRIDE = int(os.environ.get("BENCHMARK_INNER_STRIDE", "1"))
+
+if FEATURE_SELECTION not in ("inner", "fixed"):
+    raise ValueError("BENCHMARK_FEATURE_SELECTION must be 'inner' or 'fixed'")
+if FS_SEARCH not in ("two_stage", "joint"):
+    raise ValueError("BENCHMARK_FS_SEARCH must be 'two_stage' or 'joint'")
+if INNER_STRIDE < 1:
+    raise ValueError("BENCHMARK_INNER_STRIDE must be >= 1")
+
 RESULTS_DIR = Path(
     os.environ.get(
         "BENCHMARK_RESULTS_DIR",
         "results/benchmark_results"
+        if FEATURE_SELECTION == "fixed"
+        else "results/benchmark_results_inner_fs"
     )
 )
 
@@ -42,6 +73,13 @@ RUN_MODELS = [m for m in os.environ.get("BENCHMARK_MODELS", "").split(",") if m]
 
 print("Benchmark data:", BENCHMARK_DIR.resolve())
 print("Results:", RESULTS_DIR.resolve())
+print(
+    "Feature selection:", FEATURE_SELECTION,
+    "| search:", FS_SEARCH,
+    "| K:", FS_K_VALUES,
+    "| static:", FS_STATIC_OPTIONS,
+    "| inner stride:", INNER_STRIDE
+)
 
 
 # Check Files
@@ -249,11 +287,8 @@ def _graph_node_mse(stat, model, node):
     return max(float(stat["mean_y2"] - 2.0 * coef @ qy + coef @ q2 @ coef), 0.0)
 
 
-def fit_predict_graph_laplacian(outer_train, outer_test, target, features):
-    """Inner-LOO tuning of (weighting, lambda, lambda_beta), refit on the outer
-    training nodes, predict the held-out node. Same selection criterion as
-    tune_model_inner_loo: the mean of the per-node validation MSE."""
-    stats = graph_node_stats(outer_train, target, features)
+def _graph_inner_scores(stats):
+    """Mean per-node inner-LOO MSE for every (scheme, lambda, lambda_beta)."""
     train_nodes = sorted(stats)
     totals = defaultdict(float)
     for val_node in train_nodes:
@@ -266,16 +301,32 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, features):
                     totals[(scheme, float(lam), float(lb))] += _graph_node_mse(
                         stats[val_node], model, val_node
                     )
-    scores = {k: t / len(train_nodes) for k, t in totals.items()}
-    scheme, lam, lb = min(scores, key=scores.get)
+    return {k: t / len(train_nodes) for k, t in totals.items()}
+
+
+def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
+    """Inner-LOO choice of (feature set, weighting, lambda, lambda_beta), refit
+    on the outer training nodes, predict the held-out node. Same selection
+    criterion as tune_model_inner_loo: the mean of the per-node validation MSE.
+    The search is always joint: the graph model is solved exactly from per-node
+    moments, so it is cheap."""
+    best = None
+    for name, features in candidates.items():
+        stats = graph_node_stats(outer_train, target, features)
+        scores = _graph_inner_scores(stats)
+        key = min(scores, key=scores.get)
+        if best is None or scores[key] < best[0]:
+            best = (scores[key], name, key, stats)
+    inner_mse, name, (scheme, lam, lb), stats = best
+    features = candidates[name]
     model = _graph_solve(
-        _graph_prepare(_graph_train_moments(stats, train_nodes), EFFECTIVE_LAPLACIANS[scheme], lam), lb
+        _graph_prepare(_graph_train_moments(stats, sorted(stats)), EFFECTIVE_LAPLACIANS[scheme], lam), lb
     )
     test_node = outer_test["node"].iloc[0]
     Z = (outer_test[features].to_numpy(dtype=float) - model["mean_x"]) / model["std_x"]
     pred = np.column_stack((np.ones(len(Z)), Z)) @ _graph_coef(model, test_node)
     best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb}
-    return best_params, scores[(scheme, lam, lb)], pred
+    return name, best_params, inner_mse, pred
 
 
 # Fourier Helpers
@@ -365,9 +416,16 @@ REDUCED_STATIC = [
 
 temp_benchmark_df = fourier_interaction_df.copy()
 
+ALL_STATIC = [
+    "elevation_m",
+    "log_upa",
+    "log_width",
+    "local_slope"
+]
+
 missing_static = [
     c
-    for c in REDUCED_STATIC
+    for c in ALL_STATIC
     if c not in temp_benchmark_df.columns
 ]
 
@@ -451,14 +509,74 @@ TARGET_CONFIGS = {
 }
 
 
+# Feature Candidates
+# The chemistry predictors stay fixed per target: they are the only columns
+# with missing values, so every candidate uses exactly the same rows as the
+# Nov 5 benchmark. The seasonal (Fourier K) and static MERIT parts are chosen
+# inside the inner loop. "configured" (the TARGET_CONFIGS set) is always a
+# candidate. hand_m is never used: it is 0 at every WQ node.
+TARGET_CHEMISTRY = {
+    "Water temperature": ["Specific conductance"],
+    "DO concentration": ["Water temperature", "Specific conductance"],
+    "Specific conductance": ["Water temperature"],
+    "pH": ["Specific conductance"],
+    "Turbidity": []
+}
+
+STATIC_SETS = {
+    "none": [],
+    "local_slope": ["local_slope"],
+    "reduced": REDUCED_STATIC,
+    "all": ALL_STATIC
+}
+
+unknown_static = [s for s in FS_STATIC_OPTIONS if s not in STATIC_SETS]
+if unknown_static:
+    raise ValueError(f"Unknown BENCHMARK_FS_STATIC options: {unknown_static}")
+
+
+def feature_candidates(target, cfg):
+    candidates = {"configured": list(cfg["features"])}
+
+    if FEATURE_SELECTION == "fixed":
+        return candidates
+
+    chemistry = TARGET_CHEMISTRY[target]
+    if not set(chemistry) <= set(cfg["features"]):
+        raise ValueError(f"{target}: chemistry predictors not in TARGET_CONFIGS")
+
+    for K in FS_K_VALUES:
+        for static in FS_STATIC_OPTIONS:
+            features = [
+                *chemistry,
+                *fourier_features(K),
+                *STATIC_SETS[static]
+            ]
+            if any(set(features) == set(f) for f in candidates.values()):
+                continue
+            candidates[f"K={K} | {static}"] = features
+
+    return candidates
+
+
+for target, cfg in TARGET_CONFIGS.items():
+    cfg["candidates"] = feature_candidates(target, cfg)
+
+
 # Verify Features
 all_ok = True
 
 for target, cfg in TARGET_CONFIGS.items():
+    union = sorted({
+        f
+        for features in cfg["candidates"].values()
+        for f in features
+    })
+
     required = [
         "node",
         target,
-        *cfg["features"]
+        *union
     ]
 
     missing = [
@@ -478,8 +596,10 @@ for target, cfg in TARGET_CONFIGS.items():
         print(
             target,
             "OK",
-            "| predictors:",
-            len(cfg["features"])
+            "| feature candidates:",
+            len(cfg["candidates"]),
+            "| predictors in union:",
+            len(union)
         )
 
 if not all_ok:
@@ -752,8 +872,12 @@ def tune_model_inner_loo(
     target,
     features,
     model_name,
-    node_col="node"
+    node_col="node",
+    params_list=None
 ):
+
+    if params_list is None:
+        params_list = MODEL_CANDIDATES[model_name]
 
     train_nodes = (
         outer_train[node_col]
@@ -764,9 +888,7 @@ def tune_model_inner_loo(
     best_score = np.inf
     best_params = None
 
-    for params in MODEL_CANDIDATES[
-        model_name
-    ]:
+    for params in params_list:
 
         node_mse = []
 
@@ -875,11 +997,65 @@ def tune_model_inner_loo(
     )
 
 
+# Inner LOO Feature Selection
+def thin_rows(df, stride, node_col="node"):
+    """Every stride-th row of each node (rows are in time order per node)."""
+    if stride == 1:
+        return df
+    return df[df.groupby(node_col).cumcount() % stride == 0]
+
+
+def select_and_tune_inner_loo(
+    outer_train,
+    target,
+    candidates,
+    model_name,
+    node_col="node"
+):
+    """Choose (feature set, settings) by inner-LOO node MSE only.
+    Returns (feature set name, settings, inner MSE)."""
+
+    tune_df = thin_rows(outer_train, INNER_STRIDE, node_col)
+    grid = MODEL_CANDIDATES[model_name]
+
+    # The dummy model ignores its inputs, so the feature set is irrelevant.
+    if model_name == "Dummy":
+        candidates = {"configured": candidates["configured"]}
+
+    def tune(name, params_list):
+        return tune_model_inner_loo(
+            outer_train=tune_df,
+            target=target,
+            features=candidates[name],
+            model_name=model_name,
+            node_col=node_col,
+            params_list=params_list
+        )
+
+    if len(candidates) == 1 or len(grid) == 1 or FS_SEARCH == "joint":
+        best = None
+        for name in candidates:
+            params, score = tune(name, grid)
+            if best is None or score < best[2]:
+                best = (name, params, score)
+        return best
+
+    # two_stage: features at the middle setting of the grid, then settings
+    reference = grid[len(grid) // 2]
+    stage1 = {name: tune(name, [reference])[1] for name in candidates}
+    name = min(stage1, key=stage1.get)
+    others = [p for p in grid if p is not reference]
+    params, score = tune(name, others)
+    if stage1[name] <= score:
+        params, score = reference.copy(), stage1[name]
+    return name, params, score
+
+
 # Nested Outer LOO
 def benchmark_target_nested_loo(
     df,
     target,
-    features,
+    candidates,
     node_col="node",
     model_names=None
 ):
@@ -897,10 +1073,17 @@ def benchmark_target_nested_loo(
             GRAPH_MODEL_NAME
         ]
 
+    # every candidate is fitted on the same rows
+    features_union = sorted({
+        f
+        for features in candidates.values()
+        for f in features
+    })
+
     required = [
         node_col,
         target,
-        *features
+        *features_union
     ]
 
     work = (
@@ -942,8 +1125,8 @@ def benchmark_target_nested_loo(
     )
 
     print(
-        "Predictors:",
-        len(features)
+        "Feature candidates:",
+        len(candidates)
     )
 
     prediction_rows = []
@@ -984,13 +1167,6 @@ def benchmark_target_nested_loo(
             ]
         )
 
-        X_test = (
-            outer_test[
-                features
-            ]
-            .to_numpy()
-        )
-
         y_test = (
             outer_test[
                 target
@@ -1003,6 +1179,7 @@ def benchmark_target_nested_loo(
             if model_name == GRAPH_MODEL_NAME:
 
                 (
+                    feature_set,
                     best_params,
                     inner_mse,
                     pred
@@ -1010,27 +1187,39 @@ def benchmark_target_nested_loo(
                     outer_train,
                     outer_test,
                     target,
-                    features
+                    candidates
                 )
 
             else:
 
                 (
+                    feature_set,
                     best_params,
                     inner_mse
                 ) = (
-                    tune_model_inner_loo(
+                    select_and_tune_inner_loo(
                         outer_train=
                             outer_train,
                         target=
                             target,
-                        features=
-                            features,
+                        candidates=
+                            candidates,
                         model_name=
                             model_name,
                         node_col=
                             node_col
                     )
+                )
+
+                features = candidates[
+                    feature_set
+                ]
+
+                X_test = (
+                    outer_test[
+                        features
+                    ]
+                    .to_numpy()
                 )
 
                 X_train = (
@@ -1107,6 +1296,8 @@ def benchmark_target_nested_loo(
                     test_node,
                 "model":
                     model_name,
+                "features":
+                    feature_set,
                 "best_params":
                     best_params,
                 "inner_node_mse":
@@ -1244,8 +1435,8 @@ for target, cfg in TARGET_CONFIGS.items():
                 cfg["df"],
             target=
                 target,
-            features=
-                cfg["features"],
+            candidates=
+                cfg["candidates"],
             model_names=
                 MODEL_NAMES
         )
@@ -1406,11 +1597,30 @@ tuning_csv.to_csv(
 
 print("Saved tuning results.")
 
+# How often each feature set was chosen (one choice per outer fold)
+feature_selection_counts = (
+    all_tuning
+    .groupby(["target", "model", "features"])
+    .size()
+    .rename("outer_folds")
+    .reset_index()
+    .sort_values(["target", "model", "outer_folds"], ascending=[True, True, False])
+)
+
+feature_selection_counts.to_csv(
+    RESULTS_DIR
+    / "feature_selection_counts.csv",
+    index=False
+)
+
+print("\nFEATURE SETS CHOSEN (outer folds)\n")
+print(feature_selection_counts.to_string(index=False))
+
 
 # Save Configs
 FEATURE_CONFIGS = {
     target:
-        cfg["features"]
+        cfg["candidates"]
     for target, cfg
     in TARGET_CONFIGS.items()
 }
@@ -1440,6 +1650,15 @@ benchmark_config = {
         "lambda_grid": GRAPH_LAMBDA_GRID,
         "lambda_beta_grid": GRAPH_BETA_GRID,
         "tuned_by": "inner leave-one-node-out, same folds and rows as the other models",
+    },
+    "feature_selection": {
+        "mode": FEATURE_SELECTION,
+        "search": FS_SEARCH,
+        "fourier_K": FS_K_VALUES,
+        "static_options": FS_STATIC_OPTIONS,
+        "inner_row_stride": INNER_STRIDE,
+        "chemistry": TARGET_CHEMISTRY,
+        "selected_by": "inner leave-one-node-out MSE; candidates in feature_configs.json",
     },
     "validation":
         "Nested leave-one-node-out",
