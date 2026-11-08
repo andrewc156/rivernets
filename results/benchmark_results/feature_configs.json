@@ -1,3 +1,83 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:1c7f5751ab19cc0c12a10d01c23f3df86fc44a5ffad47a64d1d780ed851c593c
-size 1616
+{
+  "Water temperature": [
+    "Specific conductance",
+    "hour_sin_1",
+    "hour_cos_1",
+    "hour_sin_2",
+    "hour_cos_2",
+    "hour_sin_3",
+    "hour_cos_3",
+    "hour_sin_4",
+    "hour_cos_4",
+    "doy_sin_1",
+    "doy_cos_1",
+    "doy_sin_2",
+    "doy_cos_2",
+    "doy_sin_3",
+    "doy_cos_3",
+    "doy_sin_4",
+    "doy_cos_4",
+    "interaction_hsin1_ysin",
+    "interaction_hsin1_ycos",
+    "interaction_hcos1_ysin",
+    "interaction_hcos1_ycos",
+    "interaction_hsin2_ysin",
+    "interaction_hsin2_ycos",
+    "interaction_hcos2_ysin",
+    "interaction_hcos2_ycos",
+    "interaction_hsin3_ysin",
+    "interaction_hsin3_ycos",
+    "interaction_hcos3_ysin",
+    "interaction_hcos3_ycos",
+    "interaction_hsin4_ysin",
+    "interaction_hsin4_ycos",
+    "interaction_hcos4_ysin",
+    "interaction_hcos4_ycos",
+    "elevation_m",
+    "log_upa",
+    "local_slope"
+  ],
+  "DO concentration": [
+    "Water temperature",
+    "Specific conductance",
+    "hour_sin_1",
+    "hour_cos_1",
+    "doy_sin_1",
+    "doy_cos_1",
+    "hour_sin_2",
+    "hour_cos_2",
+    "doy_sin_2",
+    "doy_cos_2",
+    "elevation_m",
+    "log_upa",
+    "local_slope"
+  ],
+  "Specific conductance": [
+    "Water temperature",
+    "local_slope",
+    "hour_sin_1",
+    "hour_cos_1",
+    "doy_sin_1",
+    "doy_cos_1",
+    "doy_sin_2",
+    "doy_cos_2",
+    "doy_sin_3",
+    "doy_cos_3",
+    "doy_sin_4",
+    "doy_cos_4"
+  ],
+  "pH": [
+    "Specific conductance",
+    "hour_sin_1",
+    "hour_cos_1",
+    "doy_sin_1",
+    "doy_cos_1"
+  ],
+  "Turbidity": [
+    "local_slope",
+    "hour_sin_1",
+    "hour_cos_1",
+    "doy_sin_1",
+    "doy_cos_1"
+  ]
+}

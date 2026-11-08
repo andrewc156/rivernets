@@ -1,3 +1,53 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:485483dc8dfe18daa576ff2ea70eee1bd2b56eb0731e201d362901d4deffa169
-size 353
+{
+  "random_state": 42,
+  "ridge_alphas": [
+    0.03,
+    0.1,
+    0.3,
+    1.0,
+    3.0,
+    10.0
+  ],
+  "models": [
+    "Dummy",
+    "OLS",
+    "Ridge",
+    "Elastic Net",
+    "Spline GAM",
+    "Random Forest",
+    "Gradient Boosting",
+    "Graph-Laplacian"
+  ],
+  "graph_laplacian": {
+    "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)",
+    "weightings": [
+      "distance_only",
+      "area",
+      "width",
+      "slope",
+      "area_width"
+    ],
+    "lambda_grid": [
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0,
+      30.0,
+      100.0
+    ],
+    "lambda_beta_grid": [
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "tuned_by": "inner leave-one-node-out, same folds and rows as the other models"
+  },
+  "validation": "Nested leave-one-node-out",
+  "training_weighting": "Equal total weight per monitoring node"
+}
