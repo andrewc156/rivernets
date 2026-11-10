@@ -40,7 +40,10 @@ With selection done inside the inner loop, the graph term clearly helps for pH a
 conductance, while seasonal and MERIT predictors matter much more for water temperature, DO and
 turbidity. In a full rerun of the eight-model benchmark on identical folds, the graph model ranks
 first for specific conductance and pH, within $0.005$ of the best for water temperature and DO, and
-seventh of eight for turbidity.
+seventh of eight for turbidity. When every model also selects its features inside the inner loop, the
+graph model still wins clearly for specific conductance ($0.207$) and pH ($0.130$). It ties for water
+temperature, falls to fifth for DO and rises to $0.106$ for turbidity, where gradient boosting leads
+with $0.391$.
 \end{abstract}
 
 % =====================================================================
@@ -396,8 +399,110 @@ agrees: the graph model has the lowest RMSE for specific conductance (382 vs at 
 437\,\textmu S/cm) and for pH (0.221 vs at least 0.234).
 What changes is the size of the advantage once feature selection is done fairly
 (Table~\ref{tab:selection}). For specific conductance, the graph model's fair $R^2$ is about $0.14$,
-not $0.25$. The conventional models would also need their feature sets selected inside the loop before
-their numbers can be compared fairly.
+not $0.25$. The conventional models also need their feature sets selected inside the loop before
+their numbers can be compared fairly. Section~\ref{sec:innerfs} does this.
+
+% =====================================================================
+\section{Benchmark with inner-loop feature selection}
+\label{sec:innerfs}
+
+\paragraph{Method.} \code{water\_quality\_model\_benchmark.py} now selects each model's feature set
+inside the nested LOO (the default, \code{BENCHMARK\_FEATURE\_SELECTION=inner}). In every outer fold,
+every model chooses its features using inner-LOO MSE on the training stations only. The held-out
+station never influences the choice.
+\begin{itemize}
+  \item \textbf{Candidates.} The chemistry predictors are fixed per target. They are the only columns
+        with missing values, so every candidate uses exactly the same rows as before. The seasonal
+        and static parts vary: Fourier $K\in\{1,2,4\}$ $\times$ static
+        $\in\{$none, \code{local\_slope}, elevation $+$ log area $+$ slope$\}$. The
+        \code{TARGET\_CONFIGS} set is added as a further candidate (``configured''), giving 9--10
+        candidates per target.
+  \item \textbf{Search.} The graph model searches feature set, weighting, $\lambda$ and
+        $\lambda_\beta$ jointly. The other models use two stages: they choose the feature set at the
+        middle setting of their grid, then tune their settings on that set. The dummy model ignores
+        its inputs and is not affected.
+  \item \textbf{Run.} One full server run, with no row thinning (\code{BENCHMARK\_INNER\_STRIDE=1}),
+        on the same stations, rows and folds as Table~\ref{tab:benchfull}.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Benchmark with inner-loop feature selection: node-weighted nested-LOO $R^2$. Rows, stations
+and folds are identical to Table~\ref{tab:benchfull}. Bold marks the best model for each target.}
+\label{tab:benchinner}
+\begin{tabular}{l c c c c c}
+\toprule
+Model & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+Graph-Laplacian    & 0.8628 & 0.6998 & \textbf{0.2068} & \textbf{0.1299} & 0.1063 \\
+OLS                & 0.8634 & 0.6951 & $-$0.0987 & $-$0.0138 & 0.1360 \\
+Ridge              & \textbf{0.8640} & 0.7008 & $-$0.1096 & 0.0029 & 0.1362 \\
+Elastic Net        & 0.8635 & 0.7048 & $-$0.1089 & 0.0226 & 0.1362 \\
+Spline GAM         & 0.8382 & 0.7076 & 0.0218 & 0.0117 & 0.0910 \\
+Random Forest      & 0.7579 & 0.6845 & $-$0.1740 & $-$0.2685 & 0.0996 \\
+Gradient Boosting  & 0.8326 & \textbf{0.7327} & $-$0.0939 & $-$0.1713 & \textbf{0.3911} \\
+Dummy              & $-$0.0327 & $-$0.0286 & $-$0.0623 & $-$0.0301 & $-$0.0271 \\
+\midrule
+Graph rank (of 8)  & 4 & 5 & 1 & 1 & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Change in $R^2$ from fixed features (Table~\ref{tab:benchfull}) to inner-loop selection
+(Table~\ref{tab:benchinner}). Negative values mean the fixed feature set had been flattering the
+model, or that inner selection picked worse features in some folds.}
+\label{tab:benchdelta}
+\begin{tabular}{l c c c c c}
+\toprule
+Model & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+Graph-Laplacian    & 0.000 & $-$0.031 & $-$0.050 & 0.000 & $+$0.080 \\
+OLS                & 0.000 & $-$0.035 & $+$0.025 & $-$0.025 & $+$0.088 \\
+Ridge              & 0.000 & $-$0.024 & $-$0.010 & $-$0.010 & $+$0.097 \\
+Elastic Net        & 0.000 & $+$0.005 & $+$0.007 & 0.000 & $+$0.100 \\
+Spline GAM         & $-$0.011 & $+$0.062 & $-$0.009 & $+$0.009 & $-$0.011 \\
+Random Forest      & $+$0.004 & $-$0.009 & $-$0.089 & $-$0.245 & $-$0.001 \\
+Gradient Boosting  & $+$0.011 & $-$0.003 & $-$0.095 & $-$0.175 & $+$0.084 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.}
+\begin{itemize}
+  \item \textbf{Specific conductance.} The graph model drops by $0.05$, to $0.207$. This confirms that
+        the fixed-feature $0.257$ was inflated. It is still the only model clearly above zero, ahead
+        of the next one (spline GAM, $0.022$) by about $0.19$.
+  \item \textbf{pH.} The graph model is unchanged at $0.130$ and still leads by about $0.11$. The tree
+        models collapse (gradient boosting $-0.17$, random forest $-0.27$). Given richer seasonal and
+        static candidates, they choose sets that fit the training stations well but transfer poorly to a
+        new station.
+  \item \textbf{Water temperature.} Nothing material changes. The four linear-type models, including
+        the graph model, remain within $0.0012$ of each other.
+  \item \textbf{DO.} The graph model loses $0.031$ and falls from second to fifth. Its hand-picked set
+        suited it particularly well. The top five models now fall within $0.033$ of each other, which
+        is within noise for 17 stations.
+  \item \textbf{Turbidity.} Almost every model improves. The graph model goes from $0.026$ to $0.106$,
+        the linear models from about $0.04$ to $0.136$, and gradient boosting from $0.307$ to $0.391$.
+        The hand-picked turbidity set (Fourier $K=1$ plus slope) was a poor choice, and the inner loop
+        finds better ones. Gradient boosting's large lead suggests nonlinear effects that the
+        additive models miss.
+\end{itemize}
+
+The headline result survives fair selection: the graph model wins clearly for specific conductance
+and pH, and for no other target.
+
+\paragraph{Relation to the fair values in Table~\ref{tab:selection}.} For specific conductance, the
+benchmark's $0.207$ is higher than the $0.14$ from the notebook's nested selection. The candidate sets
+differ. The benchmark includes the ``configured'' set (separate daily $K=1$ and annual $K=4$ terms plus
+slope), and the graph model picks it in 22 of 24 outer folds. The notebook's 30 candidates do not
+include it. That set was itself designed by looking at outer-LOO results, so offering it as a
+candidate carries over some of the original optimism. The benchmark values are fair \emph{between
+models}, since all eight models see the same candidates. As an absolute estimate for specific
+conductance, $0.14$ remains the more conservative figure.
 
 % =====================================================================
 \section{Conclusions}
@@ -416,17 +521,25 @@ their numbers can be compared fairly.
   \item \textbf{Use the updated benchmark for model comparisons.} The graph model is now fitted
         inside \code{water\_quality\_model\_benchmark.py} on the same data as the other models, and
         the full rerun (Table~\ref{tab:benchfull}) replaces the hand-entered graph rows of the
-        Nov 5 table, in particular turbidity ($0.0145 \to 0.026$). It ranks first for
-        specific conductance and pH, is within $0.005$ of the best for water temperature and DO, and is near last for
-        turbidity. The next step is to choose the benchmark feature sets inside the inner loop, for
-        all models.
+        Nov 5 table, in particular turbidity ($0.0145 \to 0.026$).
+  \item \textbf{The graph model's advantage survives fair feature selection, but only for two
+        targets.} With every model choosing its features inside the inner loop
+        (Table~\ref{tab:benchinner}), the graph model is still clearly best for specific conductance
+        ($0.207$ vs at most $0.022$) and pH ($0.130$ vs at most $0.023$). It ties with the linear models
+        for water temperature, is mid-pack for DO, and trails gradient boosting by $0.28$ for turbidity.
+        Inner-loop selection should be the default for future benchmark runs.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
 are within noise, and no standard errors were computed. For pH and specific conductance the chosen
 features vary between folds, another sign that those gains are fragile. The daily$\times$annual
 interaction terms and separate daily and annual $K$ from the original water-temperature section
-were not among the candidates. In the original they changed predictions by at most $0.009$\,\textdegree C.
+were not among the notebook's candidates. In the original they changed predictions by at most
+$0.009$\,\textdegree C. In the benchmark, the ``configured'' candidate was designed using outer-LOO
+results, so the inner-selection values in Table~\ref{tab:benchinner} may still be slightly
+optimistic for every model, most likely for specific conductance. The two-stage search chooses each
+non-graph model's features at a single reference setting, which may disadvantage models whose best
+features depend strongly on their settings.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -434,6 +547,10 @@ and are saved in \code{results/laplacian\_fixed/}. The standalone check script i
 Tables~\ref{tab:benchfull} and~\ref{tab:bench} come from a full server run of
 \code{water\_quality\_model\_benchmark.py} (commit \code{33e913b}), saved in
 \code{results/benchmark\_results/}. The graph rows can be rerun on their own with
-\code{BENCHMARK\_MODELS=Graph-Laplacian}.
+\code{BENCHMARK\_MODELS=Graph-Laplacian}. Table~\ref{tab:benchinner} comes from a full server run of
+the same script at commit \code{b72b9b4}, with its defaults (inner selection, two-stage search,
+stride 1). Its results, including \code{feature\_selection\_counts.csv} with the feature set chosen in
+each outer fold, are written to \code{results/benchmark\_results\_inner\_fs/}. To reproduce the
+fixed-feature tables, set \code{BENCHMARK\_FEATURE\_SELECTION=fixed}.
 
 \end{document}
