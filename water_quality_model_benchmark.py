@@ -152,7 +152,8 @@ else:
 #             + lambda_beta * |b|^2 + lambda * g' L_eff g,   sum_i g_i = 0
 #
 # L_eff is one of the five scaled Kron-reduced Laplacians saved by
-# largest_uncompressed_laplacian.ipynb (effective_laplacians_clean.pkl).
+# largest_uncompressed_laplacian.ipynb (effective_laplacians_clean.pkl), or the
+# unweighted compressed-graph Laplacian built below.
 # The weighting scheme, lambda and lambda_beta are tuned by the inner LOO.
 # Kron reduction is exact: refitting with the full 67,401-node Laplacian
 # gives the same R2 to 1e-10 (reports/kron_vs_full_laplacian_report.tex).
@@ -186,9 +187,68 @@ for _name, _L in EFFECTIVE_LAPLACIANS.items():
     if _L.shape != (len(GRAPH_NODES), len(GRAPH_NODES)):
         raise ValueError(f"Laplacian {_name} does not match the {len(GRAPH_NODES)} WQ nodes.")
 
+
+def compressed_kron_laplacian(edge_weight):
+    """Kron reduction of the 67-node compressed graph onto the WQ nodes, with the
+    notebook's clean-up (symmetrise, zero row sums) and scaling (mean positive
+    diagonal = 1). edge_weight(data) gives each compressed edge's weight."""
+    order = list(_G_master.nodes())
+    pos = {n: i for i, n in enumerate(order)}
+    L = np.zeros((len(order), len(order)))
+    for u, v, data in _G_master.to_undirected(as_view=True).edges(data=True):
+        w = edge_weight(data)
+        i, j = pos[u], pos[v]
+        L[i, j] -= w
+        L[j, i] -= w
+        L[i, i] += w
+        L[j, j] += w
+    b = np.array([pos[n] for n in GRAPH_NODES])
+    interior = np.setdiff1d(np.arange(len(order)), b)
+    Lk = L[np.ix_(b, b)] - L[np.ix_(b, interior)] @ np.linalg.solve(
+        L[np.ix_(interior, interior)], L[np.ix_(interior, b)]
+    )
+    Lk = (Lk + Lk.T) / 2.0
+    np.fill_diagonal(Lk, 0.0)
+    np.fill_diagonal(Lk, -Lk.sum(axis=1))
+    d = np.diag(Lk)
+    return Lk / d[d > 1e-12].mean()
+
+
+# Check: rebuilding distance_only this way reproduces the saved matrix, so the
+# node order and scaling of the new Laplacian below match the saved ones.
+_check = compressed_kron_laplacian(lambda data: 1000.0 / float(data["length_m"]))
+if not np.allclose(_check, EFFECTIVE_LAPLACIANS["distance_only"], rtol=1e-8, atol=1e-10):
+    raise ValueError("Rebuilt distance_only Laplacian does not match the saved one.")
+
+# unweighted_compressed: every compressed reach has weight 1, whatever its
+# length or number of original segments, so the graph distance between two
+# stations is the number of reaches between them. Without weights the original
+# and compressed graphs are NOT equivalent; unweighted on the original 67k graph
+# is almost identical to distance_only (compare_edge_weights.py).
+EFFECTIVE_LAPLACIANS["unweighted_compressed"] = compressed_kron_laplacian(lambda data: 1.0)
+
+# BENCHMARK_GRAPH_WEIGHTINGS restricts which weightings the inner loop may pick.
+_weightings = [w for w in os.environ.get("BENCHMARK_GRAPH_WEIGHTINGS", "").split(",") if w]
+if _weightings:
+    _unknown = [w for w in _weightings if w not in EFFECTIVE_LAPLACIANS]
+    if _unknown:
+        raise ValueError(f"Unknown BENCHMARK_GRAPH_WEIGHTINGS: {_unknown}")
+    EFFECTIVE_LAPLACIANS = {w: EFFECTIVE_LAPLACIANS[w] for w in _weightings}
+
+# Lambda grid: the saved grid plus smaller values. With the unweighted
+# compressed Laplacian the inner loop chose the smallest saved value (0.01) in
+# most folds, so the grid is extended downward. BENCHMARK_GRAPH_LAMBDA_GRID
+# overrides it, e.g. "0.01,0.03,0.1,0.3,1,3,10,30,100" for the saved grid only.
+_lambda_env = os.environ.get("BENCHMARK_GRAPH_LAMBDA_GRID", "")
+if _lambda_env:
+    GRAPH_LAMBDA_GRID = [float(x) for x in _lambda_env.split(",") if x]
+else:
+    GRAPH_LAMBDA_GRID = sorted({0.0001, 0.001, 0.003, *map(float, GRAPH_LAMBDA_GRID)})
+print("Graph lambda grid:", GRAPH_LAMBDA_GRID)
+
 print(
     "Graph-Laplacian:",
-    len(EFFECTIVE_LAPLACIANS), "weightings |",
+    len(EFFECTIVE_LAPLACIANS), "weightings", list(EFFECTIVE_LAPLACIANS), "|",
     len(GRAPH_NODES), "WQ nodes"
 )
 
@@ -1645,7 +1705,8 @@ benchmark_config = {
     "models":
         MODEL_NAMES,
     "graph_laplacian": {
-        "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)",
+        "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)"
+                      " + unweighted_compressed (built from the compressed graph, same Kron/scaling)",
         "weightings": list(EFFECTIVE_LAPLACIANS),
         "lambda_grid": GRAPH_LAMBDA_GRID,
         "lambda_beta_grid": GRAPH_BETA_GRID,
