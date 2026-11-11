@@ -75,3 +75,7 @@ desktop.ini
 
 
 
+
+# Longer-history data (download_history.py / build_history.py), built on the server
+data/usgs/history_raw/
+data/benchmark_data_history/

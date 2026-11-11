@@ -58,6 +58,35 @@ if INNER_STRIDE < 1:
 #   "on"        same rows; every feature candidate is offered with and without
 #               the discharge anomaly, chosen in the inner loop
 DISCHARGE_MODE = os.environ.get("BENCHMARK_DISCHARGE", "")
+
+# Neighbour readings (opt-in): BENCHMARK_NEIGHBOUR=on adds the feature nbr_anom,
+# the same-hour anomaly of the target at the nearest gauged stations, to every
+# feature candidate as a second version ("... + N"); the inner loop chooses.
+# For a row of station i at hour t:
+#     nbr_anom = mean over the NEIGHBOUR_K stations j nearest to i (effective
+#                resistance on the distance-weighted graph) that report the
+#                target at hour t, of (y_jt - mean_j) / sd_j
+# with mean_j and sd_j over station j's training rows; 0 if none reports. Only
+# outer-training stations are used, never the row's own station, so the
+# held-out station's values are never an input. The inner loop reuses the
+# outer-fold feature: an inner validation station's own feature is exact, but
+# the other inner-training rows may use its values as inputs, so the choice of
+# "+ N" can be slightly optimistic; the outer test score is not affected. All
+# rows are kept (no complete-case filter), so the default run is the baseline.
+# Fixed in advance: K = 3, no time lag, z-scores.
+NEIGHBOUR = os.environ.get("BENCHMARK_NEIGHBOUR", "") == "on"
+
+# Longer history (opt-in): BENCHMARK_HISTORY=data/benchmark_data_history loads
+# the tables of build_history.py, which keep every current row (orig = 1, same
+# index) and add the node-hours of water years 2021 on outside them (orig = 0).
+# The added rows are used for training only: every model and its inner loop
+# train on all rows of the training stations, and the held-out station is
+# scored on its current rows only, so the predictions pair row by row with the
+# default run. Stations with added rows but no current rows train in every fold
+# and are never tested.
+HISTORY_DIR = os.environ.get("BENCHMARK_HISTORY", "")
+NEIGHBOUR_K = 3
+NEIGHBOUR_COL = "nbr_anom"
 if DISCHARGE_MODE not in ("", "baseline", "on"):
     raise ValueError("BENCHMARK_DISCHARGE must be '', 'baseline' or 'on'")
 
@@ -83,15 +112,21 @@ TIME_CUTOFF = pd.Timestamp(TIME_SPLIT, tz="UTC") if TIME_SPLIT else None
 #                     last 20% tests; the test stations are seen in training
 #   random_rows       a random 20% of all rows tests (leaky: neighbouring hours
 #                     of the same station fall on both sides; an upper bound)
+#   subbasin          leave one subbasin out: all stations of one of five
+#                     subbasins (SUBBASINS below) are tested together
 # In every scheme the models' settings and feature sets are still chosen by the
 # inner leave-one-station-out loop on the training rows only.
 SPLIT = os.environ.get("BENCHMARK_SPLIT", "loo")
 SPLIT_REPEATS = int(os.environ.get("BENCHMARK_SPLIT_REPEATS", "20"))
 SPLIT_TEST_FRACTION = 0.2
-if SPLIT not in ("loo", "station_repeated", "station_single", "time_within", "random_rows"):
+if SPLIT not in ("loo", "station_repeated", "station_single", "time_within", "random_rows", "subbasin"):
     raise ValueError(f"Unknown BENCHMARK_SPLIT: {SPLIT}")
 if SPLIT != "loo" and TIME_SPLIT:
     raise ValueError("BENCHMARK_SPLIT and BENCHMARK_TIME_SPLIT cannot be combined")
+if NEIGHBOUR and (TIME_SPLIT or SPLIT in ("time_within", "random_rows")):
+    raise ValueError("BENCHMARK_NEIGHBOUR needs a station split (the test station unseen)")
+if HISTORY_DIR and (TIME_SPLIT or SPLIT in ("time_within", "random_rows")):
+    raise ValueError("BENCHMARK_HISTORY needs a station split")
 
 if SPLIT != "loo":
     _default_results = f"results/benchmark_results_split_{SPLIT}"
@@ -99,6 +134,12 @@ elif TIME_SPLIT:
     _default_results = "results/benchmark_results_time_split"
 elif DISCHARGE_MODE:
     _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
+elif NEIGHBOUR:
+    _default_results = "results/benchmark_results_neighbour"
+elif HISTORY_DIR:
+    _default_results = "results/benchmark_results_history"
+elif "upstream" in FS_STATIC_OPTIONS:
+    _default_results = "results/benchmark_results_upstream"
 elif FEATURE_SELECTION == "fixed":
     _default_results = "results/benchmark_results"
 else:
@@ -159,11 +200,11 @@ if missing_files:
 
 # Load Data
 all_static_df = pd.read_pickle(
-    BENCHMARK_DIR / "all_static_df.pkl"
+    (Path(HISTORY_DIR) if HISTORY_DIR else BENCHMARK_DIR) / "all_static_df.pkl"
 )
 
 fourier_interaction_df = pd.read_pickle(
-    BENCHMARK_DIR / "fourier_interaction_df.pkl"
+    (Path(HISTORY_DIR) if HISTORY_DIR else BENCHMARK_DIR) / "fourier_interaction_df.pkl"
 )
 
 static_node_df = pd.read_pickle(
@@ -233,6 +274,58 @@ GRAPH_NODES = sorted(
     or len(data.get("usgs_clusters", [])) > 0
 )
 GRAPH_NODE_INDEX = {int(node): i for i, node in enumerate(GRAPH_NODES)}
+
+# USGS stations of every WQ node (several stations can share a node)
+NODE_STATIONS = {}
+for _node, _data in _G_master.nodes(data=True):
+    for _cluster in _data.get("usgs_clusters", []):
+        for _station in _cluster.get("member_stations", []) or (
+            [_cluster["anchor_station"]] if _cluster.get("anchor_station") is not None else []
+        ):
+            NODE_STATIONS.setdefault(int(_node), []).append(_station)
+
+# Subbasins for BENCHMARK_SPLIT=subbasin, fixed before any run from the USGS
+# station numbers, which follow the hydrologic regions (HUC4): 0907-0910
+# Colorado headwaters (1401), 0911-0915 Gunnison (1402), 0916-0919 Colorado-
+# Dolores (1403), 0920-0933 Green incl. White and San Rafael (1404-1406),
+# 0934-0937 San Juan (1408), 0938-0943 Lower Colorado (1407, 1501), 0950-0951
+# Verde (1506). Regions with fewer than four stations are merged with the
+# region they drain to or from: Gunnison with Colorado-Dolores, Verde with
+# Lower Colorado.
+SUBBASINS = [  # (name, first and last 4-digit station prefix)
+    ("Colorado headwaters", "0907", "0910"),
+    ("Gunnison + Colorado-Dolores", "0911", "0919"),
+    ("Green", "0920", "0933"),
+    ("San Juan", "0934", "0937"),
+    ("Lower Colorado + Verde", "0938", "0951"),
+]
+
+
+def _subbasin(station):
+    digits = station.split("-")[1]
+    if len(digits) > 8:  # 15-digit lat/long id: 393259107194801 is the Roaring Fork
+        return "Colorado headwaters"
+    for name, lo, hi in SUBBASINS:
+        if lo <= digits[:4] <= hi:
+            return name
+    raise ValueError(f"No subbasin for {station}")
+
+
+# Neighbours of every WQ node, nearest first by effective resistance on the
+# distance-weighted Kron Laplacian (BENCHMARK_NEIGHBOUR)
+_Lp = np.linalg.pinv(EFFECTIVE_LAPLACIANS["distance_only"])
+_R = np.diag(_Lp)[:, None] + np.diag(_Lp)[None, :] - 2 * _Lp
+NEIGHBOUR_ORDER = {
+    int(n): [int(GRAPH_NODES[j]) for j in np.argsort(_R[i], kind="stable") if j != i]
+    for i, n in enumerate(GRAPH_NODES)
+}
+
+NODE_SUBBASIN = {}
+for _node, _stations in NODE_STATIONS.items():
+    _names = {_subbasin(s) for s in _stations}
+    if len(_names) != 1:
+        raise ValueError(f"Node {_node} spans subbasins {_names}")
+    NODE_SUBBASIN[_node] = _names.pop()
 
 for _name, _L in EFFECTIVE_LAPLACIANS.items():
     if _L.shape != (len(GRAPH_NODES), len(GRAPH_NODES)):
@@ -1142,12 +1235,27 @@ TARGET_CHEMISTRY = {
     "Turbidity": []
 }
 
+# Upstream-watershed attributes (opt-in static set "upstream", e.g.
+# BENCHMARK_FS_STATIC=none,local_slope,reduced,upstream): three StreamCat
+# metrics over each station's whole upstream watershed, chosen before any run
+# for specific conductance (fetch_upstream_attributes.py): mean rock sulfur and
+# calcium oxide (gypsum, evaporites, carbonates) and row-crop land (irrigation
+# return flow). They are added next to local_slope, the one MERIT predictor
+# that helps consistently.
+UPSTREAM_FEATURES = ["ws_sulfur", "ws_cao", "ws_pctcrop"]
+
 STATIC_SETS = {
     "none": [],
     "local_slope": ["local_slope"],
     "reduced": REDUCED_STATIC,
-    "all": ALL_STATIC
+    "all": ALL_STATIC,
+    "upstream": ["local_slope", *UPSTREAM_FEATURES]
 }
+
+if "upstream" in FS_STATIC_OPTIONS:
+    _up = pd.read_csv(BENCHMARK_DIR / "upstream_attributes.csv").set_index("node")
+    for target, cfg in TARGET_CONFIGS.items():
+        cfg["df"] = cfg["df"].assign(**{c: cfg["df"]["node"].map(_up[c]) for c in UPSTREAM_FEATURES})
 
 unknown_static = [s for s in FS_STATIC_OPTIONS if s not in STATIC_SETS]
 if unknown_static:
@@ -1232,6 +1340,17 @@ if DISCHARGE_MODE:
                 **{f"{name} + Q": [*features, "q_anom"]
                    for name, features in cfg["candidates"].items()}
             }
+
+
+if NEIGHBOUR:
+    # placeholder; the value is computed inside every outer fold
+    for target, cfg in TARGET_CONFIGS.items():
+        cfg["df"] = cfg["df"].assign(**{NEIGHBOUR_COL: 0.0})
+        cfg["candidates"] = {
+            **cfg["candidates"],
+            **{f"{name} + N": [*features, NEIGHBOUR_COL]
+               for name, features in cfg["candidates"].items()}
+        }
 
 
 # Verify Features
@@ -1744,8 +1863,37 @@ def outer_fold_masks(work, nodes, node_col):
         )
         m = rank > 1 - SPLIT_TEST_FRACTION
         return [("last 20% of every station", ~m, m)]
+    if SPLIT == "subbasin":
+        out = []
+        for name, _, _ in SUBBASINS:
+            test = [n for n in nodes if NODE_SUBBASIN[int(n)] == name]
+            if test:
+                m = np.isin(node, test)
+                out.append((f"{name}: " + ",".join(map(str, sorted(test))), ~m, m))
+        return out
     m = rng.random(len(work)) < SPLIT_TEST_FRACTION
     return [("random 20% of rows", ~m, m)]
+
+
+def neighbour_anomaly(pool, rows, target, node_col="node"):
+    """nbr_anom for every row of rows, from the stations in pool (see NEIGHBOUR)."""
+    stat = pool.groupby(node_col)[target].agg(["mean", "std"])
+    z = (pool[target] - pool[node_col].map(stat["mean"])) / pool[node_col].map(stat["std"])
+    Z = pd.DataFrame({
+        "t": pool["time"].to_numpy(), "n": pool[node_col].to_numpy(),
+        "z": z.replace([np.inf, -np.inf], np.nan).to_numpy(),
+    }).pivot_table(index="t", columns="n", values="z", aggfunc="mean")
+    out = np.zeros(len(rows))
+    for node, pos in rows.groupby(node_col).indices.items():
+        cols = [n for n in NEIGHBOUR_ORDER[int(node)] if n in Z.columns]
+        if not cols:
+            continue
+        M = Z.reindex(index=pd.DatetimeIndex(rows["time"].iloc[pos]), columns=cols).to_numpy()
+        ok = ~np.isnan(M)
+        keep = ok & (np.cumsum(ok, axis=1) <= NEIGHBOUR_K)
+        n = keep.sum(axis=1)
+        out[pos] = np.where(n > 0, np.where(keep, M, 0.0).sum(axis=1) / np.maximum(n, 1), 0.0)
+    return out
 
 
 def benchmark_target_nested_loo(
@@ -1780,7 +1928,8 @@ def benchmark_target_nested_loo(
         node_col,
         target,
         *features_union,
-        *(["time"] if TIME_SPLIT or SPLIT == "time_within" else [])
+        *(["time"] if TIME_SPLIT or SPLIT == "time_within" or NEIGHBOUR else []),
+        *(["orig"] if HISTORY_DIR else [])
     ]
 
     work = (
@@ -1805,6 +1954,14 @@ def benchmark_target_nested_loo(
         .drop_duplicates()
         .tolist()
     )
+
+    if HISTORY_DIR:
+        # only stations with current rows are tested; the others always train
+        nodes = [n for n in nodes if n in set(work.loc[work["orig"] == 1, node_col])]
+        print(
+            f"History: {int((work['orig'] == 0).sum()):,} added rows, "
+            f"{work[node_col].nunique() - len(nodes)} training-only stations"
+        )
 
     if TIME_SPLIT:
         before = pd.to_datetime(work["time"], utc=True) < TIME_CUTOFF
@@ -1868,6 +2025,17 @@ def benchmark_target_nested_loo(
                 & outer_train[node_col].isin(train_nodes_ok)
             ]
             outer_test = outer_test[~before.loc[outer_test.index]]
+
+        if HISTORY_DIR:
+            outer_test = outer_test[outer_test["orig"] == 1]
+
+        if NEIGHBOUR:
+            outer_test = outer_test.assign(
+                **{NEIGHBOUR_COL: neighbour_anomaly(outer_train, outer_test, target, node_col)}
+            )
+            outer_train = outer_train.assign(
+                **{NEIGHBOUR_COL: neighbour_anomaly(outer_train, outer_train, target, node_col)}
+            )
 
         y_test = (
             outer_test[
@@ -2367,9 +2535,12 @@ benchmark_config = {
         "tailup_ranges_km": list(TAILUP_RANGES_KM),
         "graph_gb_params": GRAPH_GB_PARAMS,
         "discharge": DISCHARGE_MODE or "off",
+        "neighbour": f"on, K={NEIGHBOUR_K}" if NEIGHBOUR else "off",
+        "history": HISTORY_DIR or "off",
         "time_split": TIME_SPLIT or "off",
         "split": SPLIT,
         "split_repeats": SPLIT_REPEATS,
+        "subbasins": {str(k): v for k, v in sorted(NODE_SUBBASIN.items())},
         "time_split_min_hours": TIME_SPLIT_MIN_HOURS,
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
