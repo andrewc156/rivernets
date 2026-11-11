@@ -1231,38 +1231,54 @@ questions, so their $R^2$ values should be compared down a column, not across co
 \begin{table}[h]
 \centering
 \small
-\caption{Held-out time period: paired comparisons on identical test rows (equal station
-weights, station bootstrap 95\% interval, predictions held fixed). ``Better'' counts the stations
-where the second model has the lower mean squared error. The last block gives the all-time LOO
-models (Table~\ref{tab:final}) on the same stations and post-cutoff rows, i.e.\ trained with the
-future in view.}
+\caption{Held-out time period: $R^2$ on the test stations after the cutoff (equal station
+weights). The lower block gives the all-time LOO models (Tables~\ref{tab:final} and~\ref{tab:ideas})
+on the same stations and rows, i.e.\ trained with the future in view. Best in each block in bold.}
 \label{tab:timesplit}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{l l l l l l}
+\begin{tabular}{l rrrrr}
 \toprule
  & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
 Test stations & 16 & 12 & 16 & 11 & 8 \\
 \midrule
-\multicolumn{6}{l}{\emph{$R^2$, time split}} \\
+\multicolumn{6}{l}{\emph{Trained before the cutoff}} \\
 Dummy                & $-0.057$ & $-0.029$ & $-0.096$ & $-0.051$ & $-3.17$ \\
-Ridge                & $0.749$  & $0.603$  & $-0.910$ & $-0.022$ & $-4.56$ \\
-Gradient boosting    & $0.760$  & $0.683$  & $-0.116$ & $-0.796$ & $-2.25$ \\
-Graph-Laplacian      & $0.774$  & $0.543$  & $0.089$  & $-0.136$ & $-5.22$ \\
+Ridge                & $0.749$  & $0.603$  & $-0.910$ & $\mathbf{-0.022}$ & $-4.56$ \\
+Gradient boosting    & $0.760$  & $\mathbf{0.683}$  & $-0.116$ & $-0.796$ & $\mathbf{-2.25}$ \\
+Graph-Laplacian      & $\mathbf{0.774}$  & $0.543$  & $\mathbf{0.089}$  & $-0.136$ & $-5.22$ \\
 Graph + GB           & $0.729$  & $0.546$  & $0.059$  & $-0.471$ & $-6.51$ \\
 \midrule
-\multicolumn{6}{l}{\emph{Paired $\Delta R^2$ (interval; stations better/worse)}} \\
-Graph $-$ GB         & $+0.014$ ($-0.10$, $0.11$; 7/9) & $-0.140$ ($-0.35$, $-0.03$; 4/8) & $+0.205$ ($-0.29$, $0.56$; 10/6) & $+0.659$ ($0.28$, $1.32$; 9/2) & $-2.97$ ($-52.7$, $-0.42$; 2/6) \\
-Graph + GB $-$ graph & $-0.045$ ($-0.13$, $0.01$; 6/10) & $+0.004$ ($-0.04$, $0.04$; 6/6) & $-0.030$ ($-0.39$, $0.03$; 4/12) & $-0.334$ ($-0.76$, $-0.09$; 1/10) & $-1.29$ ($-17.9$, $0.02$; 1/7) \\
-\midrule
-\multicolumn{6}{l}{\emph{$R^2$ on the same rows, all-time LOO model}} \\
-Gradient boosting    & $0.797$ & $0.654$ & $-0.194$ & $-0.402$ & $-0.50$ \\
-Graph-Laplacian      & $0.858$ & $0.642$ & $0.229$  & $0.151$  & $-1.61$ \\
+\multicolumn{6}{l}{\emph{All-time LOO model, same rows}} \\
+Gradient boosting    & $0.797$ & $\mathbf{0.654}$ & $-0.194$ & $-0.402$ & $\mathbf{-0.50}$ \\
+Graph-Laplacian      & $\mathbf{0.858}$ & $0.642$ & $\mathbf{0.229}$  & $\mathbf{0.151}$  & $-1.61$ \\
 Graph + GB           & $0.852$ & $0.626$ & $0.219$  & $0.020$  & $-1.36$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Held-out time period: paired $\Delta R^2$ on identical test rows, with the station-bootstrap
+95\% interval (predictions held fixed). ``Better/worse'' counts the stations where the first model
+has the lower/higher mean squared error.}
+\label{tab:timepaired}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l r rcc rcc}
+\toprule
+ & & \multicolumn{3}{c}{Graph $-$ gradient boosting} & \multicolumn{3}{c}{Graph + GB $-$ graph} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Target & Stations & $\Delta R^2$ & Interval & Better/worse & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+Water temp.   & 16 & $+0.014$ & ($-0.10$, $0.11$)  & 7/9  & $-0.045$ & ($-0.13$, $0.01$)  & 6/10 \\
+DO            & 12 & $-0.140$ & ($-0.35$, $-0.03$) & 4/8  & $+0.004$ & ($-0.04$, $0.04$)  & 6/6 \\
+Spec.\ cond.  & 16 & $+0.205$ & ($-0.29$, $0.56$)  & 10/6 & $-0.030$ & ($-0.39$, $0.03$)  & 4/12 \\
+pH            & 11 & $+0.659$ & ($0.28$, $1.32$)   & 9/2  & $-0.334$ & ($-0.76$, $-0.09$) & 1/10 \\
+Turbidity     & 8  & $-2.97$  & ($-52.7$, $-0.42$) & 2/6  & $-1.29$  & ($-17.9$, $0.02$)  & 1/7 \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
-\paragraph{Held-out time period} (Table~\ref{tab:timesplit}).
+\paragraph{Held-out time period} (Tables~\ref{tab:timesplit} and~\ref{tab:timepaired}).
 \begin{itemize}
   \item \textbf{Not seeing the future costs the graph model most for pH and specific
         conductance.} On the same rows its $R^2$ falls from $0.151$ to $-0.136$ (pH), from $0.229$
@@ -1289,42 +1305,73 @@ Graph + GB           & $0.852$ & $0.626$ & $0.219$  & $0.020$  & $-1.36$ \\
 \begin{table}[h]
 \centering
 \small
-\caption{$R^2$ under the single-fold splits, next to LOO (Table~\ref{tab:final} and
-Table~\ref{tab:ideas}). Equal station weights. Test stations: LOO all; station split 5/3/5/4/3
-(water temperature/DO/specific conductance/pH/turbidity); the two time-based splits all stations.
-The best model in each column is in bold.}
-\label{tab:splits}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{l rrrr rrrr rrrr}
+\caption{$R^2$ under one random 80/20 station split (\code{station\_single}): 20\% of the stations tested together, one outer fold. The best model in each column is in bold.}
+\label{tab:split_single}
+\begin{tabular}{l rrrrr}
 \toprule
- & \multicolumn{4}{c}{Water temperature} & \multicolumn{4}{c}{DO} & \multicolumn{4}{c}{Specific conductance} \\
-\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
-Model & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows \\
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
 \midrule
-Ridge              & $\mathbf{0.864}$ & $0.907$ & $0.729$ & $0.878$ & $0.701$ & $0.866$ & $0.693$ & $0.780$ & $-0.110$ & $-0.260$ & $-0.234$ & $0.072$ \\
-Spline GAM         & $0.838$ & $0.880$ & $0.735$ & $0.888$ & $0.708$ & $0.822$ & $0.705$ & $0.775$ & $0.022$ & $-0.344$ & $-0.079$ & $0.266$ \\
-Random forest      & $0.758$ & $0.593$ & $0.788$ & $\mathbf{0.995}$ & $0.685$ & $0.860$ & $0.727$ & $\mathbf{0.987}$ & $-0.174$ & $-0.989$ & $-0.147$ & $0.380$ \\
-Gradient boosting  & $0.833$ & $0.707$ & $\mathbf{0.889}$ & $0.979$ & $\mathbf{0.733}$ & $\mathbf{0.878}$ & $\mathbf{0.827}$ & $0.958$ & $-0.094$ & $-0.647$ & $-0.096$ & $0.398$ \\
-Graph-Laplacian    & $0.863$ & $\mathbf{0.907}$ & $0.728$ & $0.879$ & $0.700$ & $0.867$ & $0.728$ & $0.796$ & $\mathbf{0.385}$ & $-1.442$ & $\mathbf{0.734}$ & $0.774$ \\
-Graph + GB         & $0.845$ & $0.864$ & $0.735$ & $0.930$ & $0.690$ & $0.810$ & $0.711$ & $0.883$ & $0.369$ & $-1.546$ & $0.667$ & $\mathbf{0.781}$ \\
-Best other         & & & & & & & & & & OLS $\mathbf{-0.166}$ & & \\
-\midrule
- & \multicolumn{4}{c}{pH} & \multicolumn{4}{c}{Turbidity} & & & & \\
-\cmidrule(lr){2-5}\cmidrule(lr){6-9}
-Model & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows & & & & \\
-\midrule
-Ridge              & $0.003$ & $-0.041$ & $-0.084$ & $0.096$ & $0.136$ & $0.114$ & $0.045$ & $0.089$ & & & & \\
-Spline GAM         & $0.012$ & $-0.032$ & $-0.060$ & $0.397$ & $0.091$ & $-0.042$ & $0.107$ & $0.236$ & & & & \\
-Random forest      & $-0.269$ & $-0.117$ & $-0.268$ & $0.747$ & $0.100$ & $-0.023$ & $\mathbf{0.303}$ & $0.441$ & & & & \\
-Gradient boosting  & $-0.171$ & $-0.068$ & $-0.078$ & $\mathbf{0.856}$ & $\mathbf{0.391}$ & $0.020$ & $0.239$ & $\mathbf{0.644}$ & & & & \\
-Graph-Laplacian    & $0.117$ & $0.079$ & $-0.193$ & $0.347$ & $0.104$ & $\mathbf{0.185}$ & $0.048$ & $0.108$ & & & & \\
-Graph + GB         & $\mathbf{0.169}$ & $\mathbf{0.139}$ & $-0.191$ & $0.619$ & $0.349$ & $0.101$ & $0.279$ & $0.442$ & & & & \\
-Best other         & & & EN $\mathbf{0.006}$ & & & & & & & & & \\
+Test stations & 5 & 3 & 5 & 4 & 3 \\ \midrule
+Dummy               & $-0.005$ & $-0.240$ & $-0.204$ & $-0.102$ & $-0.059$ \\
+OLS                 & $0.904$ & $0.867$ & $\mathbf{-0.166}$ & $-0.064$ & $0.114$ \\
+Ridge               & $0.907$ & $0.866$ & $-0.260$ & $-0.041$ & $0.114$ \\
+Elastic Net         & $0.906$ & $0.856$ & $-0.263$ & $-0.048$ & $0.114$ \\
+Spline GAM          & $0.880$ & $0.822$ & $-0.344$ & $-0.032$ & $-0.042$ \\
+Random forest       & $0.593$ & $0.860$ & $-0.989$ & $-0.117$ & $-0.023$ \\
+Gradient boosting   & $0.707$ & $\mathbf{0.878}$ & $-0.647$ & $-0.067$ & $0.020$ \\
+Graph-Laplacian     & $\mathbf{0.907}$ & $0.867$ & $-1.442$ & $0.079$ & $\mathbf{0.185}$ \\
+Graph + GB          & $0.863$ & $0.810$ & $-1.546$ & $\mathbf{0.139}$ & $0.101$ \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
 
-\paragraph{Single-fold splits} (Table~\ref{tab:splits}). Each has one outer fold, so no intervals are
+\begin{table}[h]
+\centering
+\small
+\caption{$R^2$ on the last 20\% of each station's rows (\code{time\_within}), with the first 80\% of every station in training. Best in bold.}
+\label{tab:split_within}
+\begin{tabular}{l rrrrr}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Test stations & 24 & 17 & 24 & 19 & 17 \\ \midrule
+Dummy               & $-0.293$ & $-0.324$ & $-0.007$ & $-0.081$ & $-0.119$ \\
+OLS                 & $0.728$ & $0.689$ & $-0.392$ & $-0.170$ & $0.051$ \\
+Ridge               & $0.729$ & $0.693$ & $-0.234$ & $-0.084$ & $0.045$ \\
+Elastic Net         & $0.729$ & $0.714$ & $-0.280$ & $\mathbf{0.006}$ & $0.046$ \\
+Spline GAM          & $0.734$ & $0.705$ & $-0.079$ & $-0.060$ & $0.107$ \\
+Random forest       & $0.788$ & $0.727$ & $-0.147$ & $-0.268$ & $\mathbf{0.303}$ \\
+Gradient boosting   & $\mathbf{0.889}$ & $\mathbf{0.827}$ & $-0.096$ & $-0.078$ & $0.239$ \\
+Graph-Laplacian     & $0.728$ & $0.728$ & $\mathbf{0.733}$ & $-0.193$ & $0.048$ \\
+Graph + GB          & $0.735$ & $0.711$ & $0.667$ & $-0.191$ & $0.278$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{$R^2$ on a random 20\% of rows (\code{random\_rows}). Leaky: neighbouring hours of the same station fall in training and test. Upper bound only. Best in bold.}
+\label{tab:split_rows}
+\begin{tabular}{l rrrrr}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Test stations & 24 & 17 & 24 & 19 & 17 \\ \midrule
+Dummy               & $0.000$ & $0.000$ & $0.000$ & $0.000$ & $-0.005$ \\
+OLS                 & $0.878$ & $0.780$ & $0.074$ & $0.106$ & $0.089$ \\
+Ridge               & $0.878$ & $0.780$ & $0.072$ & $0.096$ & $0.089$ \\
+Elastic Net         & $0.878$ & $0.745$ & $0.071$ & $0.091$ & $0.089$ \\
+Spline GAM          & $0.888$ & $0.775$ & $0.266$ & $0.397$ & $0.236$ \\
+Random forest       & $\mathbf{0.995}$ & $\mathbf{0.987}$ & $0.380$ & $0.747$ & $0.441$ \\
+Gradient boosting   & $0.979$ & $0.958$ & $0.398$ & $\mathbf{0.856}$ & $\mathbf{0.644}$ \\
+Graph-Laplacian     & $0.879$ & $0.796$ & $0.774$ & $0.347$ & $0.108$ \\
+Graph + GB          & $0.930$ & $0.883$ & $\mathbf{0.781}$ & $0.619$ & $0.442$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Single-fold splits} (Tables~\ref{tab:split_single}--\ref{tab:split_rows}; LOO values in Tables~\ref{tab:final} and~\ref{tab:ideas}). Each has one outer fold, so no intervals are
 given. The 80/20 station split has only 3--5 test stations.
 \begin{itemize}
   \item \textbf{80/20 station split.} With whole groups of stations held out, the graph model ties
@@ -1490,12 +1537,12 @@ and with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, saved in \code{results/avg3\_defau
 Table~\ref{tab:ideas} comes from server runs at commit \code{4949dbe}, saved in
 \code{results/idea\_dams/}, \code{idea\_tailup/}, \code{idea\_reml/}, \code{idea\_varying/} and \code{idea\_graph\_gb/}. The paired comparisons come from
 \code{compare\_runs.py} and are saved as \code{results/idea\_*\_vs\_*.csv}.
-Table~\ref{tab:timesplit} comes from a server run at commit \code{220357a} with
+Tables~\ref{tab:timesplit} and~\ref{tab:timepaired} come from a server run at commit \code{220357a} with
 \code{BENCHMARK\_TIME\_SPLIT=2026-01-01} and
 \code{BENCHMARK\_MODELS=Dummy,Ridge,Graph-Laplacian,Graph-Laplacian + GB,Gradient Boosting}, saved in
 \code{results/benchmark\_results\_time\_split/}; the paired comparisons and the all-time reference
 come from \code{time\_split\_analysis.py} and are saved in the same folder as
-\code{time\_split\_paired.csv} and \code{time\_split\_reference.csv}. Table~\ref{tab:splits} comes
+\code{time\_split\_paired.csv} and \code{time\_split\_reference.csv}. Tables~\ref{tab:split_single}--\ref{tab:split_rows} come
 from server runs at commit \code{8e1d542} with \code{BENCHMARK\_SPLIT=station\_single},
 \code{time\_within} or \code{random\_rows} (nine models), saved in
 \code{results/benchmark\_results\_split\_*/}, and from \code{split\_analysis.py}, saved in
