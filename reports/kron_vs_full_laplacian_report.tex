@@ -674,7 +674,7 @@ features depend strongly on their settings. The unweighted compressed Laplacian 
 an exploratory run (Table~\ref{tab:weightr2}) looked good for specific conductance, a mild
 second-order selection effect that the inner loop cannot remove. The gain ($+0.18$) is much larger
 than that effect plausibly explains, but it should be confirmed on another basin or a held-out time
-period. The Table~\ref{tab:weightbench} values come from local graph-only runs, not the server.
+period. A graph-only server run reproduced the Table~\ref{tab:weightbench} values to $10^{-12}$.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -689,8 +689,9 @@ each outer fold, are written to \code{results/benchmark\_results\_inner\_fs/}. T
 fixed-feature tables, set \code{BENCHMARK\_FEATURE\_SELECTION=fixed}. Tables~\ref{tab:weightmatrix}
 and~\ref{tab:weightr2} come from \code{compare\_edge\_weights.py} (about a minute), saved in
 \code{results/edge\_weight\_matrix\_checks.csv} and \code{results/edge\_weight\_r2.csv}.
-Table~\ref{tab:weightbench} uses the benchmark at commit \code{c1b3dde} with
-\code{BENCHMARK\_MODELS=Graph-Laplacian}. Setting
+Table~\ref{tab:weightbench} comes from a graph-only server run of the benchmark at commit
+\code{c1b3dde} (\code{BENCHMARK\_MODELS=Graph-Laplacian}), saved in
+\code{results/benchmark\_results\_inner\_fs\_graph/}. Setting
 \code{BENCHMARK\_GRAPH\_WEIGHTINGS=distance\_only,area,width,slope,area\_width} and
 \code{BENCHMARK\_GRAPH\_LAMBDA\_GRID=0.01,0.03,0.1,0.3,1,3,10,30,100} restores the earlier
 graph model.
