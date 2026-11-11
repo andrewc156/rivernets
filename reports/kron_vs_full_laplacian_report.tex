@@ -801,6 +801,97 @@ for specific conductance it scores $0.315$, against $0.385$ for the selected mod
 Table~\ref{tab:final}, because log area and log width hurt it. That is why the benchmark selects
 features rather than using all of them.
 
+\subsection{All chemistry variables as predictors}
+\label{sec:allchem}
+
+The main ablation uses only each target's fixed chemistry predictors, so that its rows match the
+benchmark. Run with \code{--all-chemistry}, \code{ablation\_study.py} instead tests all four other
+water-quality variables as predictors, alongside the seasonal cycles, the MERIT variables and the graph
+term (11 variables per target, 120 configurations). A row can only be used if all five variables are
+measured, so every target is limited to the same \textbf{14 stations and 80{,}592 rows}. These $R^2$
+values are therefore not comparable with the rest of the report. The run shows which chemistry
+variables carry information, not how well each target can be predicted.
+
+\begin{table}[h]
+\centering
+\small
+\caption{All-chemistry ablation (14 stations): change in $R^2$ when one variable is removed from the
+full model. Bold marks the largest loss for each target.}
+\label{tab:allchemabl}
+\begin{tabular}{l c c c c c}
+\toprule
+Variable & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+\emph{Full-model $R^2$} & \emph{0.8857} & \emph{0.7859} & \emph{0.2352} & \emph{0.2937} & \emph{$-$0.0609} \\
+\midrule
+Graph term             & $+$0.005 & $-$0.007 & $\mathbf{-0.418}$ & $-$0.024 & $+$0.022 \\
+Annual cycle           & $\mathbf{-0.207}$ & $-$0.011 & $-$0.151 & $-$0.020 & $-$0.012 \\
+Daily cycle            & $-$0.025 & $-$0.059 & $+$0.003 & $+$0.009 & $+$0.006 \\
+Water temperature      & -- & $-$0.091 & $+$0.022 & $+$0.059 & $-$0.004 \\
+DO concentration       & $-$0.056 & -- & $+$0.046 & $\mathbf{-0.109}$ & $+$0.045 \\
+Specific conductance   & $-$0.002 & $-$0.001 & -- & $+$0.058 & $+$0.001 \\
+pH                     & $+$0.014 & $\mathbf{-0.094}$ & $+$0.014 & -- & $-$0.071 \\
+Turbidity              & $+$0.001 & $+$0.015 & $+$0.004 & $-$0.002 & -- \\
+Elevation              & $+$0.004 & $-$0.007 & $+$0.004 & $-$0.006 & $+$0.037 \\
+Log upstream area      & $+$0.007 & $+$0.008 & $+$0.004 & $+$0.087 & $\mathbf{-0.086}$ \\
+Log width              & $-$0.008 & $+$0.026 & $-$0.022 & $+$0.112 & $+$0.023 \\
+Local slope            & $+$0.002 & $+$0.011 & $-$0.008 & $+$0.096 & $+$0.002 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{All-chemistry reverse ablation (14 stations): change in $R^2$ when one variable is added to
+the intercept-only base model. Bold marks the largest gain for each target.}
+\label{tab:allchemrev}
+\begin{tabular}{l c c c c c}
+\toprule
+Variable & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+\emph{Base-model $R^2$} & \emph{$-$0.0385} & \emph{$-$0.0263} & \emph{$-$0.1014} & \emph{$-$0.0508} & \emph{$-$0.0134} \\
+\midrule
+Graph term             & $+$0.097 & $+$0.030 & $-$0.044 & $+$0.066 & $+$0.001 \\
+Annual cycle           & $\mathbf{+0.810}$ & $+$0.593 & $\mathbf{+0.146}$ & $+$0.038 & $\mathbf{+0.063}$ \\
+Daily cycle            & $+$0.008 & $+$0.043 & 0.000 & $+$0.066 & 0.000 \\
+Water temperature      & -- & $\mathbf{+0.723}$ & $+$0.019 & $-$0.004 & $+$0.040 \\
+DO concentration       & $+$0.720 & -- & $+$0.118 & $\mathbf{+0.188}$ & $+$0.036 \\
+Specific conductance   & $+$0.022 & $+$0.121 & -- & $-$0.010 & $-$0.004 \\
+pH                     & $+$0.001 & $+$0.165 & $-$0.005 & -- & $+$0.008 \\
+Turbidity              & $+$0.046 & $+$0.043 & $-$0.003 & $+$0.016 & -- \\
+Elevation              & $+$0.043 & $+$0.062 & $-$0.040 & $-$0.067 & $-$0.025 \\
+Log upstream area      & $-$0.006 & $+$0.077 & $-$0.036 & $-$0.069 & $-$0.044 \\
+Log width              & $-$0.041 & $-$0.016 & $-$0.125 & $+$0.009 & $-$0.028 \\
+Local slope            & 0.000 & 0.000 & $-$0.005 & $-$0.002 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{pH and DO are tightly linked.} Each is the other's most valuable predictor once
+        removed from the full model (DO for pH $-0.109$; pH for DO $-0.094$, ahead of water
+        temperature at $-0.091$). DO alone raises pH $R^2$ by $0.188$. This is consistent with
+        photosynthesis: algae take up CO$_2$ during the day, which raises pH and DO together. The main
+        ablation cannot show this, because pH there has only specific conductance as a chemistry
+        predictor.
+  \item \textbf{With DO available, the graph term matters much less for pH} ($-0.024$ when removed,
+        against $-0.109$ in Table~\ref{tab:ablation}). Part of what the graph term captured for pH may be
+        between-station differences in biological activity, which DO measures directly.
+  \item \textbf{For specific conductance the graph term remains essential} ($-0.418$ when removed),
+        even with every chemistry variable available. This is the most robust result of either
+        ablation. Alone it does not help on these 14 stations ($-0.044$): interpolating between
+        stations needs a denser network.
+  \item \textbf{DO alone predicts water temperature well} ($+0.720$), because both follow the
+        seasons, but it adds only $0.056$ once the annual cycle is in the model.
+  \item \textbf{Turbidity cannot be predicted from these variables.} The full model scores below the
+        intercept-only model ($-0.061$). With 11 variables and 14 stations it overfits, and no single
+        variable adds more than $0.063$.
+  \item \textbf{The full models overfit.} For pH, dropping log width, slope or log area each improves
+        $R^2$ by $0.09$--$0.11$. With this few stations, ``use everything'' is clearly worse than a
+        selected subset.
+\end{itemize}
+
 % =====================================================================
 \section{Conclusions}
 
@@ -842,6 +933,10 @@ features rather than using all of them.
         Water temperature is driven by the annual cycle, DO by water temperature and the daily
         cycle, and turbidity by the annual cycle. Among the MERIT variables only slope consistently
         helps.
+  \item \textbf{With all chemistry available, pH and DO explain each other.} On the 14 stations that
+        measure all five variables (Section~\ref{sec:allchem}), DO is the most valuable predictor of
+        pH and pH of DO, consistent with photosynthesis driving both. The graph term then matters
+        little for pH but remains essential for specific conductance ($-0.42$ when removed).
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -858,9 +953,9 @@ an exploratory run (Table~\ref{tab:weightr2}) looked good for specific conductan
 second-order selection effect that the inner loop cannot remove. The gain ($+0.18$) is much larger
 than that effect plausibly explains, but it should be confirmed on another basin or a held-out time
 period. A graph-only server run reproduced the Table~\ref{tab:weightbench} values to $10^{-12}$.
-The ablation study uses only each target's fixed chemistry predictors. Testing all four other
-chemistry variables would restrict every target to the 14 stations that measure all five, and would
-make the results incomparable with the benchmark.
+The main ablation uses only each target's fixed chemistry predictors. The all-chemistry version
+(Section~\ref{sec:allchem}) is limited to 14 stations, so its results are noisy, its full models
+overfit, and its $R^2$ values are not comparable with the benchmark.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -882,6 +977,8 @@ Table~\ref{tab:weightbench} comes from a graph-only server run of the benchmark 
 \code{BENCHMARK\_GRAPH\_LAMBDA\_GRID=0.01,0.03,0.1,0.3,1,3,10,30,100} restores the earlier
 graph model. Tables~\ref{tab:ablation} and~\ref{tab:reverse} come from \code{ablation\_study.py}
 (commit \code{56a3ccb}, under two minutes with \code{--jobs 6}), saved in
-\code{results/ablation/}.
+\code{results/ablation/}. Tables~\ref{tab:allchemabl} and~\ref{tab:allchemrev} come from
+\code{ablation\_study.py --all-chemistry} (commit \code{3249fe6}), saved in
+\code{results/ablation\_all\_chemistry/}. Server runs reproduced both to $10^{-9}$.
 
 \end{document}
