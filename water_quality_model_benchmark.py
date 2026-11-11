@@ -51,12 +51,27 @@ if FS_SEARCH not in ("two_stage", "joint"):
 if INNER_STRIDE < 1:
     raise ValueError("BENCHMARK_INNER_STRIDE must be >= 1")
 
+# Discharge (opt-in), see "Discharge" below:
+#   ""          off (default)
+#   "baseline"  keep only rows where discharge is measured, but do not use it,
+#               so it is the paired baseline for "on"
+#   "on"        same rows; every feature candidate is offered with and without
+#               the discharge anomaly, chosen in the inner loop
+DISCHARGE_MODE = os.environ.get("BENCHMARK_DISCHARGE", "")
+if DISCHARGE_MODE not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_DISCHARGE must be '', 'baseline' or 'on'")
+
+if DISCHARGE_MODE:
+    _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
+elif FEATURE_SELECTION == "fixed":
+    _default_results = "results/benchmark_results"
+else:
+    _default_results = "results/benchmark_results_inner_fs"
+
 RESULTS_DIR = Path(
     os.environ.get(
         "BENCHMARK_RESULTS_DIR",
-        "results/benchmark_results"
-        if FEATURE_SELECTION == "fixed"
-        else "results/benchmark_results_inner_fs"
+        _default_results
     )
 )
 
@@ -298,6 +313,16 @@ GRAPH_LOG_TARGETS = [
         "Turbidity,Specific conductance" if GRAPH_EXTENDED else ""
     ).split(",") if t
 ]
+
+# Averaging: with BENCHMARK_GRAPH_AVERAGE_TOP=k > 1, the graph model takes the
+# best (lambda, lambda_beta) within every (feature set, weighting) pair, ranks
+# those pairs by inner-LOO MSE, and averages the predictions of the top k with
+# equal weights. k = 1 (default) is the single best setting. Applies to raw
+# targets; a log-target choice still uses its single best setting.
+GRAPH_AVERAGE_TOP = int(os.environ.get("BENCHMARK_GRAPH_AVERAGE_TOP", "1"))
+if GRAPH_AVERAGE_TOP < 1:
+    raise ValueError("BENCHMARK_GRAPH_AVERAGE_TOP must be >= 1")
+print("Graph averaging: top", GRAPH_AVERAGE_TOP)
 print("Graph log-target candidates:", GRAPH_LOG_TARGETS)
 
 print(
@@ -418,16 +443,22 @@ def _graph_inner_scores(stats):
     return {k: t / len(train_nodes) for k, t in totals.items()}
 
 
-def _graph_search(train_df, target, candidates):
-    """Best (inner MSE, feature set, (scheme, lambda, lambda_beta), stats)."""
-    best = None
+def _graph_search_all(train_df, target, candidates):
+    """For every (feature set, weighting) pair, its best (lambda, lambda_beta):
+    a list of (inner MSE, feature set, (scheme, lambda, lambda_beta), stats)."""
+    out = []
     for name, features in candidates.items():
         stats = graph_node_stats(train_df, target, features)
         scores = _graph_inner_scores(stats)
-        key = min(scores, key=scores.get)
-        if best is None or scores[key] < best[0]:
-            best = (scores[key], name, key, stats)
-    return best
+        for scheme in EFFECTIVE_LAPLACIANS:
+            key = min((k for k in scores if k[0] == scheme), key=scores.get)
+            out.append((scores[key], name, key, stats))
+    return out
+
+
+def _graph_search(train_df, target, candidates):
+    """Best (inner MSE, feature set, (scheme, lambda, lambda_beta), stats)."""
+    return min(_graph_search_all(train_df, target, candidates), key=lambda r: r[0])
 
 
 def _graph_fit(stats, nodes, scheme, lam, lb):
@@ -465,7 +496,8 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
     per-node moments, so it is cheap. For the log option the settings are tuned
     in log space and then scored on the original scale over the same inner folds."""
     test_node = outer_test["node"].iloc[0]
-    choice = ("none", *_graph_search(outer_train, target, candidates))
+    ranked = sorted(_graph_search_all(outer_train, target, candidates), key=lambda r: r[0])
+    choice = ("none", *ranked[0])
 
     if target in GRAPH_LOG_TARGETS:
         log_train = outer_train.copy()
@@ -487,14 +519,22 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
 
     transform, inner_mse, name, key, stats = choice
     features = candidates[name]
+    members = [(name, *key)]
     if transform == "none":
-        pred = _graph_predict(_graph_fit(stats, sorted(stats), *key), outer_test, features, test_node)
+        top = ranked[:GRAPH_AVERAGE_TOP]
+        pred = np.mean([
+            _graph_predict(_graph_fit(st, sorted(st), *k), outer_test, candidates[n], test_node)
+            for _, n, k, st in top
+        ], axis=0)
+        members = [(n, *k) for _, n, k, _ in top]
     else:
         pred = _graph_log_predict(
             by_node, stats, features, key, sorted(stats), outer_test, test_node, target
         )
     scheme, lam, lb = key
     best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb, "transform": transform}
+    if GRAPH_AVERAGE_TOP > 1:
+        best_params["members"] = members
     return name, best_params, inner_mse, pred
 
 
@@ -730,6 +770,58 @@ def feature_candidates(target, cfg):
 
 for target, cfg in TARGET_CONFIGS.items():
     cfg["candidates"] = feature_candidates(target, cfg)
+
+
+# Discharge
+# Hourly discharge from usgs_all_stations_hourly.csv, mapped to WQ nodes as the
+# median over each node's stations, like the WQ variables. The feature is the
+# discharge anomaly  q_anom = log(Q) - (that station's mean log Q):  raw log Q
+# mostly measures river size (it overlaps log upstream area), while the
+# dilution / sediment effects are within-station, over time. It uses only the
+# station's own discharge record, never water-quality values.
+# Rows without discharge are dropped (complete case); "baseline" uses the same
+# rows without the feature, so the two runs are a paired comparison. The task
+# becomes "predict water quality at a flow-gauged station with no WQ sensor".
+HOURLY_FILE = Path("data/usgs/usgs_all_stations_hourly.csv")
+
+if DISCHARGE_MODE:
+    _station_to_node = {}
+    for _node, _data in _G_master.nodes(data=True):
+        for _cluster in _data.get("usgs_clusters", []):
+            _stations = _cluster.get("member_stations", []) or (
+                [_cluster["anchor_station"]] if _cluster.get("anchor_station") is not None else []
+            )
+            for _station in _stations:
+                _station_to_node[_station] = _node
+
+    _q = pd.read_csv(HOURLY_FILE, usecols=["station_id", "time", "Discharge"])
+    _q["time"] = pd.to_datetime(_q["time"], utc=True, errors="coerce")
+    _q["node"] = _q["station_id"].map(_station_to_node)
+    _q = _q[_q["node"].notna() & (_q["Discharge"] > 0)].copy()
+    _q["node"] = _q["node"].astype(int)
+    _q = _q.groupby(["node", "time"], as_index=False)["Discharge"].median()
+    _q["log_q"] = np.log(_q["Discharge"])
+    _q["q_anom"] = _q["log_q"] - _q.groupby("node")["log_q"].transform("mean")
+
+    print(f"\nDischarge ({DISCHARGE_MODE}): {_q['node'].nunique()} WQ nodes with discharge")
+    for target, cfg in TARGET_CONFIGS.items():
+        df = cfg["df"].drop(columns=["q_anom"], errors="ignore").merge(
+            _q[["node", "time", "q_anom"]], on=["node", "time"], how="left"
+        )
+        df = df[df["q_anom"].notna()].copy()
+        cfg["df"] = df
+        used = df.dropna(subset=[target, *TARGET_CHEMISTRY[target]])
+        per_node = used.groupby("node").size()
+        print(
+            f"  {target:<22} stations {len(per_node):>2} | rows {len(used):>7,} | "
+            f"rows per station min {per_node.min():,}, median {int(per_node.median()):,}"
+        )
+        if DISCHARGE_MODE == "on":
+            cfg["candidates"] = {
+                **cfg["candidates"],
+                **{f"{name} + Q": [*features, "q_anom"]
+                   for name, features in cfg["candidates"].items()}
+            }
 
 
 # Verify Features
@@ -1818,6 +1910,8 @@ benchmark_config = {
                       " + unweighted_compressed, length_pow_{0.25,0.5,0.75} and confluence_compressed"
                       " (built from the compressed graph, same Kron/scaling)",
         "extended": GRAPH_EXTENDED,
+        "average_top": GRAPH_AVERAGE_TOP,
+        "discharge": DISCHARGE_MODE or "off",
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
         "weightings": list(EFFECTIVE_LAPLACIANS),
