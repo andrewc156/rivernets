@@ -689,6 +689,111 @@ hand-picked features had favoured it, and rises from seventh to fifth for turbid
 improved once features were chosen fairly.
 
 % =====================================================================
+\section{Ablation and reverse ablation}
+\label{sec:ablation}
+
+\paragraph{Design.} \code{ablation\_study.py} measures how much each input contributes to the
+graph-Laplacian model. The graph term itself counts as one of the ``variables''. For each target they
+are:
+\begin{itemize}
+  \item the target's chemistry predictors (as in the benchmark, so rows never change);
+  \item the daily cycle (\code{hour\_sin/cos\_k}) and the annual cycle (\code{doy\_sin/cos\_k}),
+        $K=4$ each;
+  \item the four static MERIT variables, one at a time: elevation, log upstream area, log width and
+        local slope (\code{hand\_m} is 0 at every station and is left out);
+  \item the graph term $g$.
+\end{itemize}
+\textbf{Ablation} removes one variable at a time from the \emph{full} model, which has all of them.
+\textbf{Reverse ablation} adds one variable at a time to the \emph{base} model, which is intercept
+only. Without the graph term the model is ridge regression on the same features. Every configuration
+is its own nested LOO on the benchmark's rows: the inner loop tunes $\lambda_\beta$ and, when the
+graph term is on, the weighting (six, including \code{unweighted\_compressed}) and $\lambda$ (the
+extended grid). That makes 90 configurations, which run in under two minutes.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Ablation: change in $R^2$ when one variable is removed from the full model. Large negative
+values mark variables whose contribution no other variable can replace. Positive values mark variables
+that hurt.}
+\label{tab:ablation}
+\begin{tabular}{l c c c c c}
+\toprule
+Variable removed & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+\emph{Full-model $R^2$} & \emph{0.8598} & \emph{0.7215} & \emph{0.3149} & \emph{0.1314} & \emph{0.0894} \\
+\midrule
+Graph term           & 0.000      & $-$0.008 & $\mathbf{-0.449}$ & $\mathbf{-0.109}$ & $+$0.047 \\
+Annual cycle         & $\mathbf{-0.721}$ & $-$0.010 & $-$0.107 & $-$0.035 & $\mathbf{-0.146}$ \\
+Daily cycle          & $-$0.009   & $-$0.116 & $+$0.003 & $-$0.043 & $+$0.001 \\
+Water temperature    & --         & $\mathbf{-0.211}$ & $+$0.025 & --       & --       \\
+Specific conductance & $-$0.002   & $-$0.004 & --       & $-$0.006 & --       \\
+Elevation            & $-$0.030   & $-$0.032 & $-$0.042 & 0.000    & $-$0.003 \\
+Log upstream area    & $-$0.006   & $-$0.021 & $+$0.078 & 0.000    & $+$0.004 \\
+Log width            & $+$0.002   & $+$0.004 & $+$0.030 & $+$0.004 & $+$0.006 \\
+Local slope          & $-$0.039   & $-$0.006 & $-$0.150 & $-$0.026 & $-$0.004 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Reverse ablation: change in $R^2$ when one variable is added to the intercept-only base
+model. It measures how much each variable explains on its own.}
+\label{tab:reverse}
+\begin{tabular}{l c c c c c}
+\toprule
+Variable added & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+\emph{Base-model $R^2$} & \emph{$-$0.0327} & \emph{$-$0.0286} & \emph{$-$0.0623} & \emph{$-$0.0301} & \emph{$-$0.0271} \\
+\midrule
+Graph term           & $+$0.024   & $-$0.107 & $\mathbf{+0.326}$ & $\mathbf{+0.067}$ & $-$0.017 \\
+Annual cycle         & $\mathbf{+0.728}$ & $+$0.552 & $+$0.002 & $+$0.023 & $\mathbf{+0.177}$ \\
+Daily cycle          & $+$0.009   & $+$0.051 & 0.000    & $+$0.052 & $-$0.002 \\
+Water temperature    & --         & $\mathbf{+0.645}$ & $-$0.027 & --       & --       \\
+Specific conductance & $-$0.023   & $-$0.064 & --       & $-$0.005 & --       \\
+Elevation            & $+$0.111   & $+$0.011 & $+$0.009 & $-$0.011 & $-$0.015 \\
+Log upstream area    & 0.000      & $+$0.053 & $-$0.041 & $-$0.030 & $-$0.023 \\
+Log width            & $-$0.041   & $-$0.012 & $+$0.009 & $+$0.010 & $-$0.006 \\
+Local slope          & $+$0.150   & $+$0.050 & $-$0.046 & $-$0.007 & $-$0.005 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.}
+\begin{itemize}
+  \item \textbf{The graph term is the key variable for specific conductance and pH.} It is the most
+        valuable variable for both targets, whether added alone or removed from the full model. For
+        specific conductance, removing it costs $0.45$; only the annual cycle for water temperature
+        matters more for any target. In the full model the inner loop picks the
+        \code{unweighted\_compressed} weighting in all 24 folds for specific conductance, and
+        distance in 17 of 19 for pH.
+  \item \textbf{Water temperature is seasonality.} The annual cycle alone gives $R^2\approx0.70$.
+        Slope and elevation add a little, consistent with steep, high streams being colder. The graph
+        term adds nothing.
+  \item \textbf{DO follows water temperature.} Water temperature is the most valuable variable both
+        ways, consistent with oxygen solubility falling as water warms. The daily cycle adds $0.12$
+        on top of everything else, consistent with photosynthesis by day and respiration at night.
+        The annual cycle is useful alone ($+0.55$) but redundant once water temperature is in the
+        model.
+  \item \textbf{Turbidity depends on the annual cycle only}, likely snowmelt and storm seasons.
+        The graph term hurts it: removing it from the full model gains $0.047$. This matches the
+        graph model's weak turbidity results in the benchmark.
+  \item \textbf{The static MERIT variables matter mainly through slope.} Slope helps water
+        temperature and specific conductance. Elevation, log area and log width are small or harmful.
+        Log width hurts every target in the full model, and log area costs specific conductance $0.078$.
+\end{itemize}
+
+\paragraph{Reading the two tables together.} The static variables and the graph term are all constant
+within a station, so they compete to explain the same between-station differences. A variable with a
+large reverse-ablation gain but a small ablation loss is useful but redundant (for example the annual
+cycle for DO, and slope for water temperature). Note also that the full model is not the best model:
+for specific conductance it scores $0.315$, against $0.385$ for the selected model in
+Table~\ref{tab:final}, because log area and log width hurt it. That is why the benchmark selects
+features rather than using all of them.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -723,6 +828,12 @@ improved once features were chosen fairly.
         specific conductance ($+0.36$ over the next model) and pH ($+0.10$). It is no better than
         simpler models for water temperature and DO. For turbidity, gradient boosting is the model
         to use.
+  \item \textbf{Ablation confirms where the graph term matters.} It is the most valuable input for
+        specific conductance ($-0.45$ when removed) and pH ($-0.11$), adds nothing for water
+        temperature and DO, and hurts turbidity (Tables~\ref{tab:ablation} and~\ref{tab:reverse}).
+        Water temperature is driven by the annual cycle, DO by water temperature and the daily
+        cycle, and turbidity by the annual cycle. Among the MERIT variables only slope consistently
+        helps.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -739,6 +850,9 @@ an exploratory run (Table~\ref{tab:weightr2}) looked good for specific conductan
 second-order selection effect that the inner loop cannot remove. The gain ($+0.18$) is much larger
 than that effect plausibly explains, but it should be confirmed on another basin or a held-out time
 period. A graph-only server run reproduced the Table~\ref{tab:weightbench} values to $10^{-12}$.
+The ablation study uses only each target's fixed chemistry predictors. Testing all four other
+chemistry variables would restrict every target to the 14 stations that measure all five, and would
+make the results incomparable with the benchmark.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -758,6 +872,8 @@ Table~\ref{tab:weightbench} comes from a graph-only server run of the benchmark 
 \code{results/benchmark\_results\_inner\_fs\_graph/}. Setting
 \code{BENCHMARK\_GRAPH\_WEIGHTINGS=distance\_only,area,width,slope,area\_width} and
 \code{BENCHMARK\_GRAPH\_LAMBDA\_GRID=0.01,0.03,0.1,0.3,1,3,10,30,100} restores the earlier
-graph model.
+graph model. Tables~\ref{tab:ablation} and~\ref{tab:reverse} come from \code{ablation\_study.py}
+(commit \code{56a3ccb}, under two minutes with \code{--jobs 6}), saved in
+\code{results/ablation/}.
 
 \end{document}
