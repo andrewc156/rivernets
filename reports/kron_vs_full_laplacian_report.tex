@@ -3,6 +3,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{siunitx}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -961,6 +962,146 @@ itself a post-hoc decision; the case for it is parsimony, not the $0.034$. The v
 with \code{BENCHMARK\_GRAPH\_EXTENDED=1}.
 
 % =====================================================================
+\section{Discharge as a predictor}
+\label{sec:discharge}
+
+Discharge is measured at many of the water-quality stations, and dilution and sediment transport
+both depend on flow. To test it, the hourly discharge of each station is mapped to its node (median
+over the node's stations, as for the water-quality variables) and enters as the anomaly
+\[
+  q_{\text{anom}} = \log Q - \overline{\log Q}_{\text{station}} .
+\]
+Raw $\log Q$ mostly measures river size, which $\log$ upstream area already covers. The anomaly
+measures high or low flow relative to that station's own record, and uses only discharge, never
+water-quality values. Rows without discharge are dropped, which changes the task to ``predict water
+quality at a flow-gauged station with no water-quality sensor''. Two benchmark runs use exactly the
+same rows and outer folds:
+\begin{itemize}
+  \item \textbf{baseline} (\code{BENCHMARK\_DISCHARGE=baseline}): the inner-loop feature
+        candidates of Section~\ref{sec:nestedsel}, without discharge;
+  \item \textbf{with Q} (\code{BENCHMARK\_DISCHARGE=on}): every candidate is also offered with
+        $q_{\text{anom}}$ added (``+\,Q''), and the inner loop chooses.
+\end{itemize}
+The graph model is the six-weighting model of Table~\ref{tab:final}. Gradient boosting and random
+forest are still running, so this section makes no ranking claims against them.
+
+\paragraph{The discharge rows are a harder task for the graph model.} Before looking at discharge
+itself, note that the baseline graph model is much weaker on these rows than in
+Table~\ref{tab:final}: pH $0.117\to-0.051$, specific conductance $0.385\to0.222$, DO
+$0.700\to0.554$ (Table~\ref{tab:qsubset}). This is not because the held-out stations are harder:
+restricting the predictions of the main run to the discharge stations changes the graph model by
+$0.02$ or less for pH, specific conductance and DO. It comes from training on fewer stations (pH 15
+instead of 19, specific conductance 20 instead of 24) and fewer rows. The graph term interpolates
+between neighbouring stations, so it loses more from a sparser network than the linear models do.
+On these rows the graph model is no longer the best pH model (Spline GAM $0.078$, Ridge $0.053$),
+although it remains clearly best for specific conductance. The comparisons below are therefore only
+between the two discharge runs, not with the earlier tables.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Subset diagnostic, $R^2$. ``Main'' is Table~\ref{tab:final} (graph) and
+Table~\ref{tab:benchinner} (Ridge) on all its stations; ``Main, Q stns.'' restricts those
+predictions to the discharge stations (indicative only, since those models were trained on all
+stations). ``Q baseline'' is trained and tested on the discharge rows only.}
+\label{tab:qsubset}
+\begin{tabular}{l S S S S S S}
+\toprule
+& \multicolumn{3}{c}{Graph-Laplacian} & \multicolumn{3}{c}{Ridge} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Target & {Main} & {Main, Q stns.} & {Q baseline} & {Main} & {Main, Q stns.} & {Q baseline} \\
+\midrule
+Water temperature    & 0.8634 & 0.8493 & 0.8290 & 0.8640 & 0.8502 & 0.8324 \\
+DO concentration     & 0.6996 & 0.6777 & 0.5536 & 0.7008 & 0.6716 & 0.6294 \\
+Spec.\ conductance   & 0.3847 & 0.3813 & 0.2222 & -0.1096 & -0.1334 & -0.9910 \\
+pH                   & 0.1173 & 0.1133 & -0.0507 & 0.0029 & 0.0049 & 0.0530 \\
+Turbidity            & 0.1043 & 0.1811 & 0.1679 & 0.1362 & 0.1457 & 0.0996 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Effect of offering discharge: $R^2$ baseline $\to$ with Q on the same rows and folds, and
+the number of outer folds in which the inner loop chose a ``+\,Q'' feature set. Bold: gains whose 95\%
+station-bootstrap interval excludes zero and the change is not driven by one or two
+stations (see text).}
+\label{tab:qeffect}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l l l l l}
+\toprule
+Target (stations) & Graph-Laplacian & OLS & Ridge & Elastic Net & Spline GAM \\
+\midrule
+Water temp.\ (20) & $0.829\to0.827$ & $0.829\to0.822$ & $0.832\to0.830$ & $0.830\to0.828$ & $0.781\to0.766$ \\
+\quad Q chosen     & 1/20 & 2/20 & 1/20 & 2/20 & 4/20 \\
+DO (14)            & $0.554\to0.512$ & $0.582\to0.570$ & $0.629\to0.614$ & $0.605\to0.595$ & $0.441\to0.461$ \\
+\quad Q chosen     & 4/14 & 2/14 & 3/14 & 5/14 & 13/14 \\
+Spec.\ cond.\ (20) & $0.222\to0.259$ & $\mathbf{-1.338\to-1.282}$ & $\mathbf{-0.991\to-0.960}$ & $\mathbf{-1.023\to-0.983}$ & $-0.172\to-0.175$ \\
+\quad Q chosen     & 18/20 & 17/20 & 17/20 & 17/20 & 1/20 \\
+pH (15)            & $-0.051\to-0.108$ & $0.048\to0.102$ & $\mathbf{0.053\to0.132}$ & $\mathbf{-0.068\to0.104}$ & $\mathbf{0.078\to0.161}$ \\
+\quad Q chosen     & 15/15 & 15/15 & 15/15 & 15/15 & 14/15 \\
+Turbidity (14)     & $0.168\to0.255$ & $0.099\to0.018$ & $0.100\to0.105$ & $0.100\to0.085$ & $0.159\to0.118$ \\
+\quad Q chosen     & 14/14 & 12/14 & 14/14 & 13/14 & 14/14 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Results.} Table~\ref{tab:qeffect} gives the paired changes. The intervals resample
+stations with the predictions held fixed, so they leave out the variability of the inner-loop
+choices and are, if anything, too narrow. Where most stations have exactly the same predictions in
+both runs (the inner loop chose the same set), an interval ending at $0.000$ is an artifact of those
+ties and does not count as evidence.
+\begin{itemize}
+  \item \textbf{pH.} Discharge helps the conventional models: Ridge $+0.079$ (interval $0.003$ to
+        $0.142$), Elastic Net $+0.172$ ($0.043$ to $0.268$), Spline GAM $+0.083$ ($0.026$ to
+        $0.137$), each better at 9--12 of 15 stations. The graph model chose ``+\,Q'' in all 15
+        folds but lost $0.057$ (interval $-0.38$ to $0.16$). Ten stations improve; the loss comes
+        from two stations whose error grows $2.3\times$ and $3.6\times$. These are not short
+        records. With discharge, the best pH model on these rows is Spline GAM ($0.161$).
+  \item \textbf{Specific conductance.} Discharge helps every linear model by $0.03$--$0.06$, with
+        13--14 of 20 stations better, consistent with dilution at high flow. Those models still have
+        $R^2<-0.9$, so this does not make them useful. The graph model gains $0.037$, but its
+        interval ($-0.012$ to $0.082$) crosses zero and one station gives 54\% of the gain. The
+        graph model remains far ahead ($0.259$ vs at most $-0.175$).
+  \item \textbf{Turbidity.} The graph model's $+0.087$ is not a finding. Its interval is $-0.16$
+        to $0.14$, 7 stations improve and 7 get worse, one station gives 60\% of the gain, and the
+        gains are at the stations with the largest errors while several low-error stations get
+        $2$--$3\times$ worse. With row-pooled instead of equal-station weights the change is
+        $-0.039$. The other models are unchanged or worse (OLS $-0.082$, interval $-0.52$ to $-0.01$). Allowing a log target as well
+        (graph-only, \code{BENCHMARK\_GRAPH\_LOG\_TARGETS=Turbidity}) gives $0.168\to0.236$, but
+        log was chosen in only 1 of 14 folds, so this is essentially the same comparison.
+  \item \textbf{Water temperature and DO.} The inner loop rarely chooses discharge, except
+        Spline GAM for DO, and the changes are small and mostly negative. The graph model's DO
+        loss ($-0.042$) comes from the four folds that chose discharge, mostly one station.
+\end{itemize}
+
+\paragraph{Selection is not benefit.} The inner loop choosing ``+\,Q'' in most folds does not mean
+it helps the held-out station: the graph model chose it in 15/15 folds for pH and 14/14 for
+turbidity, and lost or showed no reliable gain. Doubling the candidates gives the inner loop more
+chances to choose a set that fits the training stations by chance.
+
+\paragraph{Decision.} Discharge stays opt-in (\code{BENCHMARK\_DISCHARGE}). The only reasonably
+supported gains are for the conventional models on pH and, without practical value, for the linear
+models on specific conductance. It does not reliably help the graph model on any target, and
+requiring it removes stations, which costs the graph model more than discharge gives back.
+
+\subsection{Averaging the top graph settings}
+\label{sec:averaging}
+
+With \code{BENCHMARK\_GRAPH\_AVERAGE\_TOP=3}, the graph model takes the best $(\lambda,\lambda_\beta)$
+within each (feature set, weighting) pair, ranks the pairs by inner-LOO MSE, and averages the
+predictions of the top three with equal weights. This targets the unstable fold-to-fold choices of
+Section~\ref{sec:variants}. On the default model it changes no target by more than $0.006$
+(specific conductance $0.3847\to0.3825$, pH $0.1173\to0.1232$, DO $0.6996\to0.7011$, water
+temperature $0.8634\to0.8630$, turbidity $0.1043\to0.1037$). On the extended model of
+Table~\ref{tab:variants} it recovers $0.010$ of specific conductance ($0.3510\to0.3610$, still below
+the default's $0.3847$) and raises pH by $0.006$ ($0.1248\to0.1310$), both within noise. For
+specific conductance and pH, the top three usually share the weighting and $\lambda$ and differ only
+in feature set (in 92\% and 84\% of folds for the default model), so their predictions are nearly
+the same. Averaging stays off by default.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -1010,10 +1151,19 @@ with \code{BENCHMARK\_GRAPH\_EXTENDED=1}.
         beyond noise, and specific conductance falls by $0.034$ (Table~\ref{tab:variants}). With this
         few stations, extra options make the inner-loop choices less stable. The six-weighting model
         remains the main model.
+  \item \textbf{Discharge does not help the graph model, and requiring it hurts.} On the rows with
+        discharge (Section~\ref{sec:discharge}), the discharge anomaly reliably helps only the
+        conventional models for pH (Ridge $+0.08$, Spline GAM $+0.08$, Elastic Net $+0.17$) and the
+        linear models for specific conductance, where they stay below zero
+        (Table~\ref{tab:qeffect}). For the graph model no change is reliable, and keeping only
+        flow-gauged rows removes training stations, which lowers the graph model's pH $R^2$ from $0.117$ to
+        $-0.051$ before discharge is even used (Table~\ref{tab:qsubset}). Averaging the top three
+        graph settings changes nothing beyond noise. Both options stay off by default.
 \end{enumerate}
 
-\paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
-are within noise, and no standard errors were computed. For pH and specific conductance the chosen
+\paragraph{Caveats.} With only 14--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
+are within noise. Standard errors were computed only for the discharge comparison
+(Table~\ref{tab:qeffect}), as station-bootstrap intervals that hold the inner-loop choices fixed. For pH and specific conductance the chosen
 features vary between folds, another sign that those gains are fragile. The daily$\times$annual
 interaction terms and separate daily and annual $K$ from the original water-temperature section
 were not among the notebook's candidates. In the original they changed predictions by at most
@@ -1028,7 +1178,10 @@ than that effect plausibly explains, but it should be confirmed on another basin
 period. A graph-only server run reproduced the Table~\ref{tab:weightbench} values to $10^{-12}$.
 The main ablation uses only each target's fixed chemistry predictors. The all-chemistry version
 (Section~\ref{sec:allchem}) is limited to 14 stations, so its results are noisy, its full models
-overfit, and its $R^2$ values are not comparable with the benchmark.
+overfit, and its $R^2$ values are not comparable with the benchmark. The discharge runs are a
+different task (flow-gauged stations only, 14--20 stations), so their $R^2$ values are not
+comparable with Table~\ref{tab:final}, and their gradient boosting and random forest runs had not
+finished when this section was written.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -1057,5 +1210,17 @@ same model is now run with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, and its results 
 \code{results/ablation/}. Tables~\ref{tab:allchemabl} and~\ref{tab:allchemrev} come from
 \code{ablation\_study.py --all-chemistry} (commit \code{3249fe6}), saved in
 \code{results/ablation\_all\_chemistry/}. Server runs reproduced both to $10^{-9}$.
+Tables~\ref{tab:qsubset} and~\ref{tab:qeffect} come from server runs at commit \code{095727e}
+with \code{BENCHMARK\_MODELS=Graph-Laplacian,OLS,Ridge,Elastic Net,Spline GAM} and
+\code{BENCHMARK\_DISCHARGE=baseline} or \code{on}, saved in
+\code{results/benchmark\_results\_discharge\_baseline/} and
+\code{results/benchmark\_results\_discharge\_on/}. The log-turbidity variants are in
+\code{results/q\_baseline\_logturb/} and \code{results/q\_on\_logturb/}. The paired comparison,
+bootstrap intervals and subset diagnostic come from \code{discharge\_paired\_analysis.py} (seconds),
+saved in \code{results/discharge\_paired\_comparison.csv} and
+\code{results/discharge\_subset\_diagnostic.csv}. The averaging results (Section~\ref{sec:averaging})
+come from graph-only runs at the same commit with \code{BENCHMARK\_GRAPH\_AVERAGE\_TOP=3}, without
+and with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, saved in \code{results/avg3\_default/} and
+\code{results/avg3\_extended/}.
 
 \end{document}
