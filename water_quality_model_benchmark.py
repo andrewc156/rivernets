@@ -73,7 +73,29 @@ TIME_SPLIT = os.environ.get("BENCHMARK_TIME_SPLIT", "")
 TIME_SPLIT_MIN_HOURS = int(os.environ.get("BENCHMARK_TIME_SPLIT_MIN_HOURS", "720"))
 TIME_CUTOFF = pd.Timestamp(TIME_SPLIT, tz="UTC") if TIME_SPLIT else None
 
-if TIME_SPLIT:
+# Outer split (opt-in), BENCHMARK_SPLIT:
+#   loo (default)     leave one station out: each station is predicted by a
+#                     model trained on all the others (the main benchmark)
+#   station_repeated  BENCHMARK_SPLIT_REPEATS random draws (default 20) of 20%
+#                     of the stations as test stations, trained on the other 80%
+#   station_single    the first of those draws only
+#   time_within       every station: first 80% of its record (by time) trains,
+#                     last 20% tests; the test stations are seen in training
+#   random_rows       a random 20% of all rows tests (leaky: neighbouring hours
+#                     of the same station fall on both sides; an upper bound)
+# In every scheme the models' settings and feature sets are still chosen by the
+# inner leave-one-station-out loop on the training rows only.
+SPLIT = os.environ.get("BENCHMARK_SPLIT", "loo")
+SPLIT_REPEATS = int(os.environ.get("BENCHMARK_SPLIT_REPEATS", "20"))
+SPLIT_TEST_FRACTION = 0.2
+if SPLIT not in ("loo", "station_repeated", "station_single", "time_within", "random_rows"):
+    raise ValueError(f"Unknown BENCHMARK_SPLIT: {SPLIT}")
+if SPLIT != "loo" and TIME_SPLIT:
+    raise ValueError("BENCHMARK_SPLIT and BENCHMARK_TIME_SPLIT cannot be combined")
+
+if SPLIT != "loo":
+    _default_results = f"results/benchmark_results_split_{SPLIT}"
+elif TIME_SPLIT:
     _default_results = "results/benchmark_results_time_split"
 elif DISCHARGE_MODE:
     _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
@@ -817,7 +839,19 @@ def _graph_log_predict(by_node, stats, features, key, train_nodes, test_df, test
         ))
         for n in train_nodes
     ])
-    return np.exp(_graph_predict(model, test_df, features, test_node)) * smear - 1.0
+    return np.exp(_graph_predict_nodes(model, test_df, features)) * smear - 1.0
+
+
+def _graph_predict_nodes(model, df, features):
+    """Predict rows that may belong to several stations, each with its own g."""
+    out = np.empty(len(df))
+    for node, pos in df.groupby("node").indices.items():
+        out[pos] = _graph_predict(model, df.iloc[pos], features, node)
+    return out
+
+
+def _fold_id(target, outer_test):
+    return (target, len(outer_test), outer_test.index[0], outer_test.index[-1])
 
 
 def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
@@ -857,9 +891,9 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
     if transform == "none":
         top = ranked[:GRAPH_AVERAGE_TOP]
         pred = np.mean([
-            _graph_predict(
+            _graph_predict_nodes(
                 _graph_fit(st, sorted(st), *k, vidx=_graph_vidx(n, candidates[n])),
-                outer_test, candidates[n], test_node
+                outer_test, candidates[n]
             )
             for _, n, k, st in top
         ], axis=0)
@@ -876,7 +910,7 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
         best_params["members"] = members
     _GRAPH_LAST.clear()
     _GRAPH_LAST.update({
-        "id": (target, test_node), "name": name, "key": key, "stats": stats,
+        "id": _fold_id(target, outer_test), "name": name, "key": key, "stats": stats,
         "features": features, "transform": transform, "pred": pred,
         "best_params": best_params, "inner_mse": inner_mse,
     })
@@ -888,8 +922,7 @@ _GRAPH_LAST = {}
 
 def fit_predict_graph_gb(outer_train, outer_test, target, candidates):
     """Graph model, then gradient boosting on its out-of-station residuals."""
-    test_node = outer_test["node"].iloc[0]
-    if _GRAPH_LAST.get("id") != (target, test_node):
+    if _GRAPH_LAST.get("id") != _fold_id(target, outer_test):
         fit_predict_graph_laplacian(outer_train, outer_test, target, candidates)
     g = dict(_GRAPH_LAST)
     if g["transform"] != "none" or GRAPH_AVERAGE_TOP > 1:
@@ -1690,6 +1723,31 @@ def select_and_tune_inner_loo(
 
 
 # Nested Outer LOO
+def outer_fold_masks(work, nodes, node_col):
+    """(label, train mask, test mask) for every outer fold of BENCHMARK_SPLIT."""
+    node = work[node_col].to_numpy()
+    if SPLIT == "loo":
+        return [(n, node != n, node == n) for n in nodes]
+    rng = np.random.default_rng(RANDOM_STATE)
+    if SPLIT in ("station_repeated", "station_single"):
+        k = max(1, int(round(SPLIT_TEST_FRACTION * len(nodes))))
+        out = []
+        for r in range(1 if SPLIT == "station_single" else SPLIT_REPEATS):
+            test = rng.choice(np.array(nodes), size=k, replace=False)
+            m = np.isin(node, test)
+            out.append((f"draw {r + 1}: " + ",".join(map(str, sorted(test))), ~m, m))
+        return out
+    if SPLIT == "time_within":
+        rank = (
+            pd.to_datetime(work["time"], utc=True)
+            .groupby(work[node_col]).rank(method="first", pct=True).to_numpy()
+        )
+        m = rank > 1 - SPLIT_TEST_FRACTION
+        return [("last 20% of every station", ~m, m)]
+    m = rng.random(len(work)) < SPLIT_TEST_FRACTION
+    return [("random 20% of rows", ~m, m)]
+
+
 def benchmark_target_nested_loo(
     df,
     target,
@@ -1722,7 +1780,7 @@ def benchmark_target_nested_loo(
         node_col,
         target,
         *features_union,
-        *(["time"] if TIME_SPLIT else [])
+        *(["time"] if TIME_SPLIT or SPLIT == "time_within" else [])
     ]
 
     work = (
@@ -1782,40 +1840,27 @@ def benchmark_target_nested_loo(
     prediction_rows = []
     tuning_rows = []
 
+    folds = outer_fold_masks(work, nodes, node_col)
+
     for (
         fold_number,
-        test_node
+        (test_node, train_mask, test_mask)
     ) in enumerate(
-        nodes,
+        folds,
         start=1
     ):
 
         print(
             f"\rOuter fold "
             f"{fold_number}/"
-            f"{len(nodes)} "
-            f"| node "
+            f"{len(folds)} "
+            f"| test "
             f"{test_node}",
             end=""
         )
 
-        outer_train = (
-            work[
-                work[
-                    node_col
-                ]
-                != test_node
-            ]
-        )
-
-        outer_test = (
-            work[
-                work[
-                    node_col
-                ]
-                == test_node
-            ]
-        )
+        outer_train = work[train_mask]
+        outer_test = work[test_mask]
 
         if TIME_SPLIT:
             outer_train = outer_train[
@@ -1927,10 +1972,12 @@ def benchmark_target_nested_loo(
 
             for (
                 row_index,
+                row_node,
                 y_true,
                 y_pred
             ) in zip(
                 outer_test.index,
+                outer_test[node_col],
                 y_test,
                 pred
             ):
@@ -1940,8 +1987,10 @@ def benchmark_target_nested_loo(
                         target,
                     "model":
                         model_name,
+                    "fold":
+                        fold_number,
                     "node":
-                        test_node,
+                        row_node,
                     "row_index":
                         row_index,
                     "y_true":
@@ -2319,6 +2368,8 @@ benchmark_config = {
         "graph_gb_params": GRAPH_GB_PARAMS,
         "discharge": DISCHARGE_MODE or "off",
         "time_split": TIME_SPLIT or "off",
+        "split": SPLIT,
+        "split_repeats": SPLIT_REPEATS,
         "time_split_min_hours": TIME_SPLIT_MIN_HOURS,
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
