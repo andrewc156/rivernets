@@ -630,6 +630,65 @@ consistent with conductance being driven by tributary inputs and mixing at confl
 distance downstream. It is a hypothesis this analysis cannot confirm.
 
 % =====================================================================
+\section{Final model comparison}
+\label{sec:final}
+
+Table~\ref{tab:final} puts the updated graph model, with six candidate weightings including
+\code{unweighted\_compressed} and the extended $\lambda$ grid, next to the other seven models from
+the inner-selection benchmark (Table~\ref{tab:benchinner}). Every model chooses its feature set inside
+the inner loop, on identical stations, rows and folds. Both columns come from server runs.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Final comparison: node-weighted nested-LOO $R^2$ with inner-loop feature selection for every
+model. The Graph-Laplacian row is the updated model of Table~\ref{tab:weightbench}. The other rows
+repeat Table~\ref{tab:benchinner}. Bold marks the best model for each target.}
+\label{tab:final}
+\begin{tabular}{l c c c c c}
+\toprule
+Model & {Water temp.} & {DO} & {Spec.\ cond.} & {pH} & {Turbidity} \\
+\midrule
+Graph-Laplacian    & 0.8634 & 0.6996 & \textbf{0.3847} & \textbf{0.1173} & 0.1043 \\
+OLS                & 0.8634 & 0.6951 & $-$0.0987 & $-$0.0138 & 0.1360 \\
+Ridge              & \textbf{0.8640} & 0.7008 & $-$0.1096 & 0.0029 & 0.1362 \\
+Elastic Net        & 0.8635 & 0.7048 & $-$0.1089 & 0.0226 & 0.1362 \\
+Spline GAM         & 0.8382 & 0.7076 & 0.0218 & 0.0117 & 0.0910 \\
+Random Forest      & 0.7579 & 0.6845 & $-$0.1740 & $-$0.2685 & 0.0996 \\
+Gradient Boosting  & 0.8326 & \textbf{0.7327} & $-$0.0939 & $-$0.1713 & \textbf{0.3911} \\
+Dummy              & $-$0.0327 & $-$0.0286 & $-$0.0623 & $-$0.0301 & $-$0.0271 \\
+\midrule
+Graph rank (of 8)          & 4 & 5 & 1 & 1 & 5 \\
+Graph $-$ best other model & $-$0.001 & $-$0.033 & $+$0.363 & $+$0.095 & $-$0.287 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Specific conductance.} The graph model is the only model that predicts unseen stations
+        usefully. Every other model is at or below zero except the spline GAM ($0.022$). The graph
+        model reaches $0.385$, with RMSE 348\,\textmu S/cm against at least 439 for the others.
+  \item \textbf{pH.} The graph model is the only model meaningfully above zero, ahead by $0.095$. The
+        lead is at the edge of what 19 stations can resolve, and pH $R^2$ is low for every model.
+  \item \textbf{Water temperature.} The graph model is in a four-way tie with ridge, elastic net and OLS,
+        all within $0.0012$. Seasonality explains almost everything, and the graph term adds
+        nothing.
+  \item \textbf{DO.} The graph model is in the middle of a tight group. The top five models span
+        $0.033$, within noise for 17 stations, with gradient boosting slightly ahead.
+  \item \textbf{Turbidity.} Gradient boosting leads by a wide margin ($0.391$ against $0.136$ for the
+        linear models and $0.104$ for the graph model). This points to nonlinear responses that no
+        additive model captures.
+\end{itemize}
+
+Both targets where the graph model wins vary mainly \emph{between} stations, which is what the
+river-network term captures. The other models see only a station's own predictors and season, and
+have nothing that relates one station to another. Compared with the Nov 5 benchmark
+(Table~\ref{tab:benchfull}), the graph model keeps first place for specific conductance and pH, with
+a much larger margin for specific conductance. It drops from second to mid-pack for DO, where its
+hand-picked features had favoured it, and rises from seventh to fifth for turbidity, where every model
+improved once features were chosen fairly.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -659,6 +718,11 @@ distance downstream. It is a hypothesis this analysis cannot confirm.
         (one step per reach) is a different geometry. Chosen inside the inner loop, it raises the
         graph model's specific conductance $R^2$ from $0.207$ to $0.385$ and leaves the other
         targets within noise (Table~\ref{tab:weightbench}).
+  \item \textbf{Final standing.} With fair feature selection for every model and the updated graph
+        model (Table~\ref{tab:final}), the graph-Laplacian model is clearly the best choice for
+        specific conductance ($+0.36$ over the next model) and pH ($+0.10$). It is no better than
+        simpler models for water temperature and DO. For turbidity, gradient boosting is the model
+        to use.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
