@@ -893,6 +893,74 @@ Local slope            & 0.000 & 0.000 & $-$0.005 & $-$0.002 & 0.000 \\
 \end{itemize}
 
 % =====================================================================
+\section{Further graph-model variants}
+\label{sec:variants}
+
+Four changes to the graph model were fixed in advance and tested together. Each is a candidate the
+inner loop may choose, so the outer held-out station never influences the choice:
+\begin{enumerate}
+  \item \textbf{Confluence count} (\code{confluence\_compressed}). The 67 compressed nodes are 26
+        stations (all mid-reach), 18 confluences, 20 headwater or outlet ends and 3 other gauges, so
+        the reach count of Section~\ref{sec:weights} also counts any stations and gauges in between.
+        In this Laplacian the graph distance counts only confluences: each edge has resistance $0.5$
+        per confluence at its ends plus $0.1$, so a pass-through node adds only $0.1$.
+  \item \textbf{Length-power weights} $w=\ell^{-\alpha}$ with $\alpha\in\{0.25, 0.5, 0.75\}$, between
+        the reach count ($\alpha=0$) and distance ($\alpha=1$).
+  \item \textbf{Log target} for turbidity and specific conductance. The model is fitted on
+        $\log(1+y)$ and transformed back with a node-weighted smearing correction. Raw vs log is
+        chosen by inner-LOO MSE on the original scale.
+  \item \textbf{Wider $\lambda$ grid}, $10^{-6}$ to 3000, since earlier runs chose the edges of the
+        grid.
+\end{enumerate}
+This gives 10 weightings and 17 $\lambda$ values. The run is graph-only with inner feature selection,
+on the same rows and folds as Table~\ref{tab:weightbench}.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Graph-Laplacian $R^2$ with the four variants as inner-loop candidates, against the six-weighting
+model of Table~\ref{tab:weightbench}, and the settings the inner loop chose across outer folds.}
+\label{tab:variants}
+\begin{tabular}{l S S S l}
+\toprule
+Target & {Six wtgs.} & {Variants} & {Change} & Chosen across outer folds \\
+\midrule
+Spec.\ conductance   & 0.3847 & 0.3510 & -0.0337 & confluence 13, reach 10; raw 14, log 10 \\
+pH                   & 0.1173 & 0.1248 & 0.0075  & $\alpha=0.5$--$0.75$: 13/19; $\lambda=10^{-6}$: 17/19 \\
+DO concentration     & 0.6996 & 0.7026 & 0.0030  & confluence 13/17 \\
+Water temperature    & 0.8634 & 0.8635 & 0.0001  & reach 24/24; $\lambda=3000$ in 22/24 \\
+Turbidity            & 0.1043 & 0.1023 & -0.0020 & width 14/17; raw 17/17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.} No variant improves the model. Every change is within the noise level for 17--24
+stations, and specific conductance falls by $0.034$, at the edge of it.
+\begin{itemize}
+  \item \textbf{Specific conductance.} The inner loop is split between the confluence count (13
+        folds) and the reach count (10), and between raw (14) and log (10). When the choice flips
+        from fold to fold, so do the held-out predictions, and the extra options cost more than they
+        gain. The two weightings are about equally good, so the tributary interpretation of
+        Section~\ref{sec:weights} holds with either, but neither is better.
+  \item \textbf{pH} moves to the intermediate weightings and chooses $\lambda=10^{-6}$ in 17 of 19
+        folds. That is effectively $\lambda\to0$: no smoothing among training stations, with the
+        held-out station predicted by interpolation along the network. The $+0.008$ is noise.
+  \item \textbf{Water temperature} chooses $\lambda=3000$, the new top of the grid, in 22 of 24 folds.
+        Smoothing that strong makes the graph term nearly constant, which confirms the ablation
+        result that water temperature needs no graph term.
+  \item \textbf{Turbidity} never chooses the log target. This does not show that a log target cannot
+        help. Raw scores the best of several hundred settings, while log is scored with a single
+        setting tuned in log space, so the comparison favours raw.
+  \item \textbf{DO} mostly chooses the confluence count, with no material change in $R^2$.
+\end{itemize}
+
+\paragraph{Decision.} The six-weighting model of Tables~\ref{tab:weightbench} and~\ref{tab:final}
+remains the main model and the script's default. The variants add computation and less stable
+choices, and do not improve any target. Choosing the simpler model after seeing these results is
+itself a post-hoc decision; the case for it is parsimony, not the $0.034$. The variants stay available
+with \code{BENCHMARK\_GRAPH\_EXTENDED=1}.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -937,6 +1005,11 @@ Local slope            & 0.000 & 0.000 & $-$0.005 & $-$0.002 & 0.000 \\
         measure all five variables (Section~\ref{sec:allchem}), DO is the most valuable predictor of
         pH and pH of DO, consistent with photosynthesis driving both. The graph term then matters
         little for pH but remains essential for specific conductance ($-0.42$ when removed).
+  \item \textbf{Further variants do not help.} A confluence-count Laplacian, length-power weights, a
+        log target and a wider $\lambda$ grid, all chosen inside the inner loop, change no target
+        beyond noise, and specific conductance falls by $0.034$ (Table~\ref{tab:variants}). With this
+        few stations, extra options make the inner-loop choices less stable. The six-weighting model
+        remains the main model.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 17--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -970,12 +1043,16 @@ each outer fold, are written to \code{results/benchmark\_results\_inner\_fs/}. T
 fixed-feature tables, set \code{BENCHMARK\_FEATURE\_SELECTION=fixed}. Tables~\ref{tab:weightmatrix}
 and~\ref{tab:weightr2} come from \code{compare\_edge\_weights.py} (about a minute), saved in
 \code{results/edge\_weight\_matrix\_checks.csv} and \code{results/edge\_weight\_r2.csv}.
-Table~\ref{tab:weightbench} comes from a graph-only server run of the benchmark at commit
-\code{c1b3dde} (\code{BENCHMARK\_MODELS=Graph-Laplacian}), saved in
-\code{results/benchmark\_results\_inner\_fs\_graph/}. Setting
+Table~\ref{tab:weightbench} and the graph row of Table~\ref{tab:final} come from a graph-only server
+run of the benchmark at commit \code{c1b3dde} (\code{BENCHMARK\_MODELS=Graph-Laplacian}), saved in
+\code{results/benchmark\_results\_inner\_fs\_graph/}. The script's current defaults reproduce this
+model exactly (six weightings, $\lambda$ from $10^{-4}$ to 100, raw targets). Setting
 \code{BENCHMARK\_GRAPH\_WEIGHTINGS=distance\_only,area,width,slope,area\_width} and
 \code{BENCHMARK\_GRAPH\_LAMBDA\_GRID=0.01,0.03,0.1,0.3,1,3,10,30,100} restores the earlier
-graph model. Tables~\ref{tab:ablation} and~\ref{tab:reverse} come from \code{ablation\_study.py}
+five-weighting graph model of Table~\ref{tab:benchinner}. Table~\ref{tab:variants} comes from a
+graph-only server run at commit \code{f9f9f42}, whose defaults then included all four variants. The
+same model is now run with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, and its results are saved in
+\code{results/benchmark\_results\_graph\_improved/}. Tables~\ref{tab:ablation} and~\ref{tab:reverse} come from \code{ablation\_study.py}
 (commit \code{56a3ccb}, under two minutes with \code{--jobs 6}), saved in
 \code{results/ablation/}. Tables~\ref{tab:allchemabl} and~\ref{tab:allchemrev} come from
 \code{ablation\_study.py --all-chemistry} (commit \code{3249fe6}), saved in

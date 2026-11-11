@@ -247,36 +247,55 @@ EFFECTIVE_LAPLACIANS["confluence_compressed"] = compressed_kron_laplacian(
     )
 )
 
-# BENCHMARK_GRAPH_WEIGHTINGS restricts which weightings the inner loop may pick.
-_weightings = [w for w in os.environ.get("BENCHMARK_GRAPH_WEIGHTINGS", "").split(",") if w]
-if _weightings:
-    _unknown = [w for w in _weightings if w not in EFFECTIVE_LAPLACIANS]
-    if _unknown:
-        raise ValueError(f"Unknown BENCHMARK_GRAPH_WEIGHTINGS: {_unknown}")
-    EFFECTIVE_LAPLACIANS = {w: EFFECTIVE_LAPLACIANS[w] for w in _weightings}
+# Graph model settings
+#
+# Default: the main graph model of the report (Tables 13 and 14): six
+# weightings, lambda grid 1e-4 ... 100, raw targets only.
+#
+# BENCHMARK_GRAPH_EXTENDED=1 turns on the variants tested in the report's
+# "Further graph-model variants" section: all ten weightings (adds
+# length_pow_{0.25,0.5,0.75} and confluence_compressed), the wide lambda grid
+# 1e-6 ... 3000, and raw vs log(1 + y) for turbidity and specific conductance.
+# They did not improve the model.
+#
+# BENCHMARK_GRAPH_WEIGHTINGS, BENCHMARK_GRAPH_LAMBDA_GRID and
+# BENCHMARK_GRAPH_LOG_TARGETS override each part individually.
+GRAPH_EXTENDED = os.environ.get("BENCHMARK_GRAPH_EXTENDED", "0") == "1"
 
-# Lambda grid: the saved grid widened at both ends (1e-6 ... 3000). Earlier
-# runs chose the bottom of the grid for pH and the top for water temperature.
-# BENCHMARK_GRAPH_LAMBDA_GRID overrides it, e.g.
-# "0.01,0.03,0.1,0.3,1,3,10,30,100" for the saved grid only.
+DEFAULT_GRAPH_WEIGHTINGS = [
+    "distance_only", "area", "width", "slope", "area_width", "unweighted_compressed"
+]
+_weightings = [w for w in os.environ.get("BENCHMARK_GRAPH_WEIGHTINGS", "").split(",") if w]
+if not _weightings:
+    _weightings = list(EFFECTIVE_LAPLACIANS) if GRAPH_EXTENDED else DEFAULT_GRAPH_WEIGHTINGS
+_unknown = [w for w in _weightings if w not in EFFECTIVE_LAPLACIANS]
+if _unknown:
+    raise ValueError(f"Unknown BENCHMARK_GRAPH_WEIGHTINGS: {_unknown}")
+EFFECTIVE_LAPLACIANS = {w: EFFECTIVE_LAPLACIANS[w] for w in _weightings}
+
+# Lambda grid: the saved grid (0.01 ... 100) extended down to 1e-4, or with
+# BENCHMARK_GRAPH_EXTENDED=1 widened to 1e-6 ... 3000.
 _lambda_env = os.environ.get("BENCHMARK_GRAPH_LAMBDA_GRID", "")
 if _lambda_env:
     GRAPH_LAMBDA_GRID = [float(x) for x in _lambda_env.split(",") if x]
-else:
+elif GRAPH_EXTENDED:
     GRAPH_LAMBDA_GRID = sorted({
         1e-6, 1e-5, 0.0001, 0.001, 0.003,
         *map(float, GRAPH_LAMBDA_GRID),
         300.0, 1000.0, 3000.0
     })
+else:
+    GRAPH_LAMBDA_GRID = sorted({0.0001, 0.001, 0.003, *map(float, GRAPH_LAMBDA_GRID)})
 print("Graph lambda grid:", GRAPH_LAMBDA_GRID)
 
 # Log targets: for these targets the graph model may also be fitted on
 # log(1 + y) (turbidity has a few zeros). Predictions are transformed back with
 # a node-weighted smearing correction, and raw vs log is chosen by the inner-LOO
-# MSE on the original scale. Set BENCHMARK_GRAPH_LOG_TARGETS="" to turn it off.
+# MSE on the original scale. Off by default.
 GRAPH_LOG_TARGETS = [
     t for t in os.environ.get(
-        "BENCHMARK_GRAPH_LOG_TARGETS", "Turbidity,Specific conductance"
+        "BENCHMARK_GRAPH_LOG_TARGETS",
+        "Turbidity,Specific conductance" if GRAPH_EXTENDED else ""
     ).split(",") if t
 ]
 print("Graph log-target candidates:", GRAPH_LOG_TARGETS)
@@ -1798,6 +1817,7 @@ benchmark_config = {
         "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)"
                       " + unweighted_compressed, length_pow_{0.25,0.5,0.75} and confluence_compressed"
                       " (built from the compressed graph, same Kron/scaling)",
+        "extended": GRAPH_EXTENDED,
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
         "weightings": list(EFFECTIVE_LAPLACIANS),
