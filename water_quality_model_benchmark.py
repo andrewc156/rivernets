@@ -262,6 +262,119 @@ EFFECTIVE_LAPLACIANS["confluence_compressed"] = compressed_kron_laplacian(
     )
 )
 
+# The ten weightings of BENCHMARK_GRAPH_EXTENDED=1 (report Table 19). The
+# matrices added below are opt-in only, through BENCHMARK_GRAPH_WEIGHTINGS.
+EXTENDED_GRAPH_WEIGHTINGS = list(EFFECTIVE_LAPLACIANS)
+
+# Dams (opt-in weightings distance_dams, unweighted_dams)
+# A large reservoir breaks the river's continuity (cold, clear bottom releases),
+# so smoothing across a dam should be weak. Each dam adds a resistance of
+# DAM_RESISTANCE x the median reach resistance to the compressed reach it sits
+# on, in series with the reach:  w' = 1 / (1/w + n_dams * R_dam).
+# MAJOR_DAMS is a hand-compiled list of the basin's large storage dams
+# (reservoir storage of about 0.3 km^3 or more); a dam counts only if it lies
+# within DAM_SNAP_KM of a reach's MERIT path, so dams off the network are skipped.
+DAM_RESISTANCE = float(os.environ.get("BENCHMARK_DAM_RESISTANCE", "10"))
+DAM_SNAP_KM = 2.0
+MAJOR_DAMS = {
+    "Glen Canyon": (36.9375, -111.4844),
+    "Hoover": (36.0161, -114.7377),
+    "Davis": (35.1972, -114.5697),
+    "Parker": (34.2964, -114.1394),
+    "Flaming Gorge": (40.9147, -109.4217),
+    "Fontenelle": (42.0275, -110.0675),
+    "Blue Mesa": (38.4528, -107.3358),
+    "Navajo": (36.8006, -107.6125),
+    "McPhee": (37.5761, -108.5747),
+    "Granby": (40.1483, -105.8664),
+    "Dillon": (39.6247, -106.0647),
+    "Theodore Roosevelt": (33.6717, -111.1617),
+    "Coolidge": (33.1736, -110.5250),
+}
+
+# MERIT node ids are row * 15001 + col on the 3-arcsecond (1/1200 degree) grid;
+# the grid origin is recovered from the compressed nodes' row/col/lat/lon.
+_MERIT_COLS = 15001
+_any = next(iter(_G_master.nodes(data=True)))[1]
+_LAT0 = _any["latitude"] + _any["row"] / 1200.0
+_LON0 = _any["longitude"] - _any["col"] / 1200.0
+for _n, _d in _G_master.nodes(data=True):
+    _r, _c = divmod(int(_n), _MERIT_COLS)
+    if (_r, _c) != (_d["row"], _d["col"]):
+        raise ValueError("MERIT node id does not decode to its row/col")
+
+_path_ll, _path_edge = [], []
+for _u, _v, _d in _G_master.edges(data=True):
+    for _n in _d["original_path"]:
+        _r, _c = divmod(int(_n), _MERIT_COLS)
+        _path_ll.append((_LAT0 - _r / 1200.0, _LON0 + _c / 1200.0))
+        _path_edge.append(frozenset((_u, _v)))
+_path_ll = np.array(_path_ll)
+
+DAMS_ON_EDGE = {}
+for _name, (_la, _lo) in MAJOR_DAMS.items():
+    _km = np.hypot(
+        (_path_ll[:, 0] - _la) * 111.0,
+        (_path_ll[:, 1] - _lo) * 111.0 * np.cos(np.radians(_la)),
+    )
+    _i = int(_km.argmin())
+    if _km[_i] <= DAM_SNAP_KM:
+        DAMS_ON_EDGE[_path_edge[_i]] = DAMS_ON_EDGE.get(_path_edge[_i], 0) + 1
+        print(f"Dam {_name}: on the network ({_km[_i]:.2f} km)")
+    else:
+        print(f"Dam {_name}: off the network ({_km[_i]:.0f} km), skipped")
+
+
+def _with_dams(edge_weight):
+    edges = list(_G_master.to_undirected(as_view=True).edges(data=True))
+    r_dam = DAM_RESISTANCE * np.median([1.0 / edge_weight(u, v, d) for u, v, d in edges])
+    return lambda u, v, data: 1.0 / (
+        1.0 / edge_weight(u, v, data) + DAMS_ON_EDGE.get(frozenset((u, v)), 0) * r_dam
+    )
+
+
+EFFECTIVE_LAPLACIANS["distance_dams"] = compressed_kron_laplacian(
+    _with_dams(lambda u, v, data: 1000.0 / float(data["length_m"]))
+)
+EFFECTIVE_LAPLACIANS["unweighted_dams"] = compressed_kron_laplacian(
+    _with_dams(lambda u, v, data: 1.0)
+)
+
+# tailup_<km> (opt-in): flow-directed covariance instead of a Laplacian, the
+# exponential tail-up model of Ver Hoef, Peterson & Theobald (2006). For station
+# i upstream of station j
+#     C_ij = sqrt(A_i / A_j) * exp(-d_ij / range),
+# with A the upstream area (the additive weights telescope to this ratio) and
+# d_ij the river distance; stations on different branches are uncorrelated a
+# priori. g ~ N(0, C / lambda) gives the penalty lambda * g' C^-1 g, so C^-1
+# (scaled like the Laplacians) takes the place of L_eff. C^-1 has no constant
+# null vector, so the sum-to-zero constraint on g is not applied to it
+# (_graph_prepare): a held-out station with no flow-connected neighbour then
+# gets g = 0, the intercept.
+TAILUP_RANGES_KM = (100, 300, 1000)
+_upa = static_node_df.drop_duplicates("node").set_index("node")["upa_km2"]
+_C_flow = np.eye(len(GRAPH_NODES))
+_D_flow = np.full((len(GRAPH_NODES), len(GRAPH_NODES)), np.inf)
+for _i, _n in enumerate(GRAPH_NODES):
+    _dist, _cur = 0.0, _n
+    while _G_master.out_degree(_cur) > 0:
+        (_nxt,) = _G_master.successors(_cur)
+        _dist += float(_G_master.edges[_cur, _nxt]["length_m"]) / 1000.0
+        _cur = _nxt
+        if _cur in GRAPH_NODE_INDEX:
+            _j = GRAPH_NODE_INDEX[_cur]
+            _D_flow[_i, _j] = _D_flow[_j, _i] = _dist
+            _ratio = min(float(_upa[_n]) / float(_upa[_cur]), 1.0)
+            _C_flow[_i, _j] = _C_flow[_j, _i] = np.sqrt(_ratio)
+for _range in TAILUP_RANGES_KM:
+    _C = np.where(np.isfinite(_D_flow), _C_flow * np.exp(-np.nan_to_num(_D_flow, posinf=0.0) / _range), 0.0)
+    np.fill_diagonal(_C, 1.0)
+    if np.linalg.eigvalsh(_C).min() <= 0:
+        raise ValueError(f"tail-up covariance with range {_range} km is not positive definite")
+    _Q = np.linalg.inv(_C)
+    _Q = (_Q + _Q.T) / 2.0
+    EFFECTIVE_LAPLACIANS[f"tailup_{_range}"] = _Q / np.diag(_Q).mean()
+
 # Graph model settings
 #
 # Default: the main graph model of the report (Tables 13 and 14): six
@@ -282,7 +395,7 @@ DEFAULT_GRAPH_WEIGHTINGS = [
 ]
 _weightings = [w for w in os.environ.get("BENCHMARK_GRAPH_WEIGHTINGS", "").split(",") if w]
 if not _weightings:
-    _weightings = list(EFFECTIVE_LAPLACIANS) if GRAPH_EXTENDED else DEFAULT_GRAPH_WEIGHTINGS
+    _weightings = EXTENDED_GRAPH_WEIGHTINGS if GRAPH_EXTENDED else DEFAULT_GRAPH_WEIGHTINGS
 _unknown = [w for w in _weightings if w not in EFFECTIVE_LAPLACIANS]
 if _unknown:
     raise ValueError(f"Unknown BENCHMARK_GRAPH_WEIGHTINGS: {_unknown}")
@@ -323,6 +436,55 @@ GRAPH_AVERAGE_TOP = int(os.environ.get("BENCHMARK_GRAPH_AVERAGE_TOP", "1"))
 if GRAPH_AVERAGE_TOP < 1:
     raise ValueError("BENCHMARK_GRAPH_AVERAGE_TOP must be >= 1")
 print("Graph averaging: top", GRAPH_AVERAGE_TOP)
+
+# Hyperparameter choice (opt-in): BENCHMARK_GRAPH_SELECT=reml chooses the
+# weighting and lambda by restricted (REML) likelihood instead of inner-LOO MSE.
+# The penalised fit is the posterior mode of
+#     node-mean residual r_i = F_i' a + g_i + e_i,   e ~ N(0, s2 I),
+#     g ~ N(0, s2 * L_eff^+ / lambda),
+# where F holds the intercept and the node-constant (static MERIT) predictors
+# and r_i is the node mean minus the time-varying part of the fit. Feature set
+# and lambda_beta are still chosen by inner-LOO MSE, with the weighting and
+# lambda inside each inner fold set by REML on that fold's training stations.
+# The aim is more stable choices: the likelihood uses all training stations at
+# once instead of scoring one held-out station at a time.
+GRAPH_SELECT = os.environ.get("BENCHMARK_GRAPH_SELECT", "loo")
+if GRAPH_SELECT not in ("loo", "reml"):
+    raise ValueError("BENCHMARK_GRAPH_SELECT must be 'loo' or 'reml'")
+
+# Network-varying seasonal cycle (opt-in): BENCHMARK_GRAPH_VARYING=annual (or
+# "annual,daily") offers every feature set also with station-specific
+# coefficients on the first annual (doy_sin_1, doy_cos_1) and/or daily
+# harmonic, smoothed over the graph like g:
+#     y_it = b0 + z_it' b + g_i + sum_k gamma_ik s_k(t),
+#     penalty  lambda * g' L g + lambda_v * sum_k gamma_k' L gamma_k,
+# so a station's seasonal amplitude and phase are borrowed from its neighbours.
+# lambda_v has its own grid. Such feature sets are named "<set> | vary".
+VARYING_SETS = {
+    "annual": ["doy_sin_1", "doy_cos_1"],
+    "daily": ["hour_sin_1", "hour_cos_1"],
+}
+GRAPH_VARYING_COLS = [
+    c for s in os.environ.get("BENCHMARK_GRAPH_VARYING", "").split(",") if s
+    for c in VARYING_SETS[s]
+]
+GRAPH_VARY_SUFFIX = " | vary"
+GRAPH_VARYING_LAMBDA_GRID = [0.01, 0.1, 1.0, 10.0, 100.0]
+if GRAPH_VARYING_COLS and GRAPH_SELECT == "reml":
+    raise ValueError("BENCHMARK_GRAPH_VARYING is not supported with BENCHMARK_GRAPH_SELECT=reml")
+print("Graph hyperparameter choice:", GRAPH_SELECT, "| varying columns:", GRAPH_VARYING_COLS)
+
+# Graph + gradient boosting (opt-in model, BENCHMARK_MODELS="Graph-Laplacian + GB"):
+# the graph model as configured above, then HistGradientBoosting fitted to its
+# out-of-station residuals (each training station predicted by the graph model
+# refitted without it), with the time-varying predictors only (no static MERIT
+# columns, which made plain boosting overfit between stations). Prediction =
+# graph prediction + boosting correction. The boosting setting is fixed in
+# advance (GRAPH_GB_PARAMS), not tuned.
+GRAPH_GB_NAME = "Graph-Laplacian + GB"
+GRAPH_GB_PARAMS = {
+    "learning_rate": 0.05, "max_iter": 200, "max_leaf_nodes": 15, "l2_regularization": 1.0
+}
 print("Graph log-target candidates:", GRAPH_LOG_TARGETS)
 
 print(
@@ -370,15 +532,16 @@ def _graph_train_moments(stats, train_nodes):
     ex2 = np.mean([np.diag(stats[n]["exx"]) for n in train_nodes], axis=0)
     std_x = np.sqrt(np.maximum(ex2 - mean_x ** 2, 1e-12))
     q = len(mean_x) + 1
-    A11, rb, qmean = np.zeros((q, q)), np.zeros(q), {}
+    A11, rb, qmean, q2s, qys = np.zeros((q, q)), np.zeros(q), {}, {}, {}
     for n in train_nodes:
         qm, q2, qy = _graph_standard_moments(stats[n], mean_x, std_x)
         A11 += q2
         rb += qy
-        qmean[n] = qm
+        qmean[n], q2s[n], qys[n] = qm, q2, qy
     return {
         "mean_x": mean_x, "std_x": std_x, "q": q, "A11": A11, "rb": rb,
-        "qmean": qmean, "mean_y": {n: stats[n]["mean_y"] for n in train_nodes},
+        "qmean": qmean, "q2": q2s, "qy": qys,
+        "mean_y": {n: stats[n]["mean_y"] for n in train_nodes},
     }
 
 
@@ -396,13 +559,27 @@ def _graph_prepare(tm, L, lam):
     sol = np.linalg.solve(np.diag(mask) + lam * L, np.column_stack((Bt, rg, c)))
     X, u, v = sol[:, :q], sol[:, q], sol[:, q + 1]
     return {"tm": tm, "X": X, "u": u, "v": v, "BtX": Bt.T @ X, "Btu": Bt.T @ u,
-            "Btv": Bt.T @ v, "cX": c @ X, "cu": c @ u, "cv": c @ v}
+            "Btv": Bt.T @ v, "cX": c @ X, "cu": c @ u, "cv": c @ v,
+            "gauge": _is_laplacian(L)}
+
+
+def _is_laplacian(L):
+    """A Laplacian has the constant vector in its null space, so g is only
+    defined up to a constant and needs the sum-to-zero gauge. A positive
+    definite precision (tail-up) does not."""
+    return bool(np.allclose(L.sum(axis=1), 0.0, atol=1e-8))
 
 
 def _graph_solve(prep, lambda_beta):
     tm, q = prep["tm"], prep["tm"]["q"]
     ridge = np.eye(q)
     ridge[0, 0] = 0.0                                # intercept not penalised
+    if not prep["gauge"]:
+        beta = np.linalg.solve(
+            tm["A11"] + lambda_beta * ridge - prep["BtX"], tm["rb"] - prep["Btu"]
+        )
+        return {"beta": beta, "g": prep["u"] - prep["X"] @ beta,
+                "mean_x": tm["mean_x"], "std_x": tm["std_x"]}
     S = np.empty((q + 1, q + 1))
     S[:q, :q] = tm["A11"] + lambda_beta * ridge - prep["BtX"]
     S[:q, q] = -prep["Btv"]
@@ -414,10 +591,84 @@ def _graph_solve(prep, lambda_beta):
             "mean_x": tm["mean_x"], "std_x": tm["std_x"]}
 
 
+def _graph_prepare_varying(tm, L, lam, lam_v, vidx):
+    """Like _graph_prepare, with station-specific coefficients on the columns
+    vidx of [1, z] as well as the intercept: G (N x p) holds g and the gammas,
+    column k penalised by lam_k * G_k' L G_k (lam for g, lam_v for the rest),
+    each with its own sum-to-zero gauge when L is a Laplacian."""
+    N, q = L.shape[0], tm["q"]
+    cols = [0, *vidx]
+    p = len(cols)
+    M = np.kron(np.diag([lam] + [lam_v] * (p - 1)), L)
+    B, rg = np.zeros((N * p, q)), np.zeros(N * p)
+    for n, q2 in tm["q2"].items():
+        idx = GRAPH_NODE_INDEX[n] + N * np.arange(p)
+        M[np.ix_(idx, idx)] += q2[np.ix_(cols, cols)]
+        B[idx] = q2[cols]
+        rg[idx] = tm["qy"][n][cols]
+    C = np.kron(np.eye(p), np.ones((N, 1))) if _is_laplacian(L) else np.zeros((N * p, 0))
+    sol = np.linalg.solve(M, np.column_stack((B, rg, C)))
+    X, u, V = sol[:, :q], sol[:, q], sol[:, q + 1:]
+    return {"tm": tm, "X": X, "u": u, "V": V, "cols": cols, "N": N,
+            "BtX": B.T @ X, "Btu": B.T @ u, "BtV": B.T @ V,
+            "CX": C.T @ X, "Cu": C.T @ u, "CV": C.T @ V}
+
+
+def _graph_solve_varying(prep, lambda_beta):
+    tm, q = prep["tm"], prep["tm"]["q"]
+    k = prep["V"].shape[1]
+    ridge = np.eye(q)
+    ridge[0, 0] = 0.0
+    S = np.empty((q + k, q + k))
+    S[:q, :q] = tm["A11"] + lambda_beta * ridge - prep["BtX"]
+    S[:q, q:] = -prep["BtV"]
+    S[q:, :q] = prep["CX"]
+    S[q:, q:] = prep["CV"]
+    z = np.linalg.solve(S, np.concatenate((tm["rb"] - prep["Btu"], prep["Cu"])))
+    beta, mu = z[:q], z[q:]
+    G = (prep["u"] - prep["X"] @ beta - prep["V"] @ mu).reshape(len(prep["cols"]), prep["N"]).T
+    return {"beta": beta, "g": G[:, 0], "G": G, "cols": prep["cols"],
+            "mean_x": tm["mean_x"], "std_x": tm["std_x"]}
+
+
 def _graph_coef(model, node):
     coef = model["beta"].copy()
-    coef[0] += model["g"][GRAPH_NODE_INDEX[int(node)]]
+    j = GRAPH_NODE_INDEX[int(node)]
+    if "G" in model:
+        coef[model["cols"]] += model["G"][j]
+    else:
+        coef[0] += model["g"][j]
     return coef
+
+
+# Covariance of g up to scale, for the REML criterion: L_eff^+ (the inverse for
+# the positive definite tail-up precisions).
+GRAPH_COVARIANCE = {name: np.linalg.pinv(L) for name, L in EFFECTIVE_LAPLACIANS.items()}
+
+
+def _graph_reml(model, tm, nodes, cov, lam, fixed_idx):
+    """Restricted log-likelihood (s2 profiled out) of the training stations'
+    node-mean residuals r_i = mean y_i - (time-varying part of the fit) under
+    r = F a + g + e, Var = s2 (I + cov / lam), F = [1, static columns]."""
+    beta = model["beta"]
+    tv = np.setdiff1d(np.arange(len(beta)), fixed_idx)
+    Qm = np.array([tm["qmean"][n] for n in nodes])
+    r = np.array([tm["mean_y"][n] for n in nodes]) - Qm[:, tv] @ beta[tv]
+    F = Qm[:, fixed_idx]
+    idx = [GRAPH_NODE_INDEX[n] for n in nodes]
+    V = np.eye(len(nodes)) + cov[np.ix_(idx, idx)] / lam
+    Vi = np.linalg.inv(V)
+    FtViF = F.T @ Vi @ F
+    P = Vi - Vi @ F @ np.linalg.solve(FtViF, F.T @ Vi)
+    m, k = len(nodes), F.shape[1]
+    return -0.5 * (
+        np.linalg.slogdet(V)[1] + np.linalg.slogdet(FtViF)[1] + (m - k) * np.log(r @ P @ r)
+    )
+
+
+def _graph_fixed_idx(features):
+    """Indices in [1, z] of the intercept and the node-constant predictors."""
+    return np.array([0, *[1 + i for i, f in enumerate(features) if f in ALL_STATIC]])
 
 
 def _graph_node_mse(stat, model, node):
@@ -426,30 +677,95 @@ def _graph_node_mse(stat, model, node):
     return max(float(stat["mean_y2"] - 2.0 * coef @ qy + coef @ q2 @ coef), 0.0)
 
 
-def _graph_inner_scores(stats):
-    """Mean per-node inner-LOO MSE for every (scheme, lambda, lambda_beta)."""
+def _graph_settings(tm, vidx=()):
+    """Yield ((scheme, lambda, lambda_beta[, lambda_v]), fitted model) over the grid."""
+    for scheme, L in EFFECTIVE_LAPLACIANS.items():
+        for lam in GRAPH_LAMBDA_GRID:
+            if vidx:
+                for lam_v in GRAPH_VARYING_LAMBDA_GRID:
+                    prep = _graph_prepare_varying(tm, L, float(lam), float(lam_v), vidx)
+                    for lb in GRAPH_BETA_GRID:
+                        yield ((scheme, float(lam), float(lb), float(lam_v)),
+                               _graph_solve_varying(prep, float(lb)))
+            else:
+                prep = _graph_prepare(tm, L, float(lam))
+                for lb in GRAPH_BETA_GRID:
+                    yield (scheme, float(lam), float(lb)), _graph_solve(prep, float(lb))
+
+
+def _graph_inner_scores(stats, vidx=()):
+    """Mean per-node inner-LOO MSE for every (scheme, lambda, lambda_beta[, lambda_v])."""
     train_nodes = sorted(stats)
     totals = defaultdict(float)
     for val_node in train_nodes:
         tm = _graph_train_moments(stats, [n for n in train_nodes if n != val_node])
-        for scheme, L in EFFECTIVE_LAPLACIANS.items():
-            for lam in GRAPH_LAMBDA_GRID:
-                prep = _graph_prepare(tm, L, float(lam))
-                for lb in GRAPH_BETA_GRID:
-                    model = _graph_solve(prep, float(lb))
-                    totals[(scheme, float(lam), float(lb))] += _graph_node_mse(
-                        stats[val_node], model, val_node
-                    )
+        for key, model in _graph_settings(tm, vidx):
+            totals[key] += _graph_node_mse(stats[val_node], model, val_node)
     return {k: t / len(train_nodes) for k, t in totals.items()}
+
+
+def _graph_reml_choices(tm, nodes, fixed_idx):
+    """For every lambda_beta, the (scheme, lambda) with the largest REML
+    criterion on these training stations, and its fitted model."""
+    best = {}
+    for scheme, L in EFFECTIVE_LAPLACIANS.items():
+        for lam in GRAPH_LAMBDA_GRID:
+            prep = _graph_prepare(tm, L, float(lam))
+            for lb in GRAPH_BETA_GRID:
+                model = _graph_solve(prep, float(lb))
+                ll = _graph_reml(model, tm, nodes, GRAPH_COVARIANCE[scheme], float(lam), fixed_idx)
+                if float(lb) not in best or ll > best[float(lb)][0]:
+                    best[float(lb)] = (ll, (scheme, float(lam), float(lb)), model)
+    return best
+
+
+def _graph_inner_scores_reml(stats, fixed_idx):
+    """Mean per-node inner-LOO MSE for every lambda_beta, with the weighting
+    and lambda chosen by REML on each inner fold's training stations."""
+    train_nodes = sorted(stats)
+    totals = defaultdict(float)
+    for val_node in train_nodes:
+        nodes = [n for n in train_nodes if n != val_node]
+        tm = _graph_train_moments(stats, nodes)
+        for lb, (_, _, model) in _graph_reml_choices(tm, nodes, fixed_idx).items():
+            totals[lb] += _graph_node_mse(stats[val_node], model, val_node)
+    return {k: t / len(train_nodes) for k, t in totals.items()}
+
+
+def _graph_candidates(candidates):
+    """The feature sets the graph model searches: every candidate, plus a
+    "<set> | vary" copy when BENCHMARK_GRAPH_VARYING is set."""
+    out = dict(candidates)
+    if GRAPH_VARYING_COLS:
+        for name, features in candidates.items():
+            if any(c in features for c in GRAPH_VARYING_COLS):
+                out[name + GRAPH_VARY_SUFFIX] = features
+    return out
+
+
+def _graph_vidx(name, features):
+    if not name.endswith(GRAPH_VARY_SUFFIX):
+        return ()
+    return tuple(1 + features.index(c) for c in GRAPH_VARYING_COLS if c in features)
 
 
 def _graph_search_all(train_df, target, candidates):
     """For every (feature set, weighting) pair, its best (lambda, lambda_beta):
     a list of (inner MSE, feature set, (scheme, lambda, lambda_beta), stats)."""
-    out = []
+    out, cache = [], {}
     for name, features in candidates.items():
-        stats = graph_node_stats(train_df, target, features)
-        scores = _graph_inner_scores(stats)
+        if tuple(features) not in cache:
+            cache[tuple(features)] = graph_node_stats(train_df, target, features)
+        stats = cache[tuple(features)]
+        if GRAPH_SELECT == "reml":
+            fixed_idx = _graph_fixed_idx(features)
+            scores = _graph_inner_scores_reml(stats, fixed_idx)
+            lb = min(scores, key=scores.get)
+            nodes = sorted(stats)
+            key = _graph_reml_choices(_graph_train_moments(stats, nodes), nodes, fixed_idx)[lb][1]
+            out.append((scores[lb], name, key, stats))
+            continue
+        scores = _graph_inner_scores(stats, _graph_vidx(name, features))
         for scheme in EFFECTIVE_LAPLACIANS:
             key = min((k for k in scores if k[0] == scheme), key=scores.get)
             out.append((scores[key], name, key, stats))
@@ -461,10 +777,13 @@ def _graph_search(train_df, target, candidates):
     return min(_graph_search_all(train_df, target, candidates), key=lambda r: r[0])
 
 
-def _graph_fit(stats, nodes, scheme, lam, lb):
-    return _graph_solve(
-        _graph_prepare(_graph_train_moments(stats, nodes), EFFECTIVE_LAPLACIANS[scheme], lam), lb
-    )
+def _graph_fit(stats, nodes, scheme, lam, lb, lam_v=None, vidx=()):
+    tm = _graph_train_moments(stats, nodes)
+    if vidx:
+        return _graph_solve_varying(
+            _graph_prepare_varying(tm, EFFECTIVE_LAPLACIANS[scheme], lam, lam_v, vidx), lb
+        )
+    return _graph_solve(_graph_prepare(tm, EFFECTIVE_LAPLACIANS[scheme], lam), lb)
 
 
 def _graph_predict(model, df, features, node):
@@ -496,6 +815,7 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
     per-node moments, so it is cheap. For the log option the settings are tuned
     in log space and then scored on the original scale over the same inner folds."""
     test_node = outer_test["node"].iloc[0]
+    candidates = _graph_candidates(candidates)
     ranked = sorted(_graph_search_all(outer_train, target, candidates), key=lambda r: r[0])
     choice = ("none", *ranked[0])
 
@@ -523,7 +843,10 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
     if transform == "none":
         top = ranked[:GRAPH_AVERAGE_TOP]
         pred = np.mean([
-            _graph_predict(_graph_fit(st, sorted(st), *k), outer_test, candidates[n], test_node)
+            _graph_predict(
+                _graph_fit(st, sorted(st), *k, vidx=_graph_vidx(n, candidates[n])),
+                outer_test, candidates[n], test_node
+            )
             for _, n, k, st in top
         ], axis=0)
         members = [(n, *k) for _, n, k, _ in top]
@@ -531,11 +854,51 @@ def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
         pred = _graph_log_predict(
             by_node, stats, features, key, sorted(stats), outer_test, test_node, target
         )
-    scheme, lam, lb = key
+    scheme, lam, lb = key[:3]
     best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb, "transform": transform}
+    if len(key) > 3:
+        best_params["lambda_vary"] = key[3]
     if GRAPH_AVERAGE_TOP > 1:
         best_params["members"] = members
+    _GRAPH_LAST.clear()
+    _GRAPH_LAST.update({
+        "id": (target, test_node), "name": name, "key": key, "stats": stats,
+        "features": features, "transform": transform, "pred": pred,
+        "best_params": best_params, "inner_mse": inner_mse,
+    })
     return name, best_params, inner_mse, pred
+
+
+_GRAPH_LAST = {}
+
+
+def fit_predict_graph_gb(outer_train, outer_test, target, candidates):
+    """Graph model, then gradient boosting on its out-of-station residuals."""
+    test_node = outer_test["node"].iloc[0]
+    if _GRAPH_LAST.get("id") != (target, test_node):
+        fit_predict_graph_laplacian(outer_train, outer_test, target, candidates)
+    g = dict(_GRAPH_LAST)
+    if g["transform"] != "none" or GRAPH_AVERAGE_TOP > 1:
+        raise ValueError(f"{GRAPH_GB_NAME} needs raw targets and GRAPH_AVERAGE_TOP=1")
+    name, key, stats, features = g["name"], g["key"], g["stats"], g["features"]
+    vidx = _graph_vidx(name, features)
+    train_nodes = sorted(stats)
+    graph_train = np.empty(len(outer_train))
+    for n, pos in outer_train.groupby("node").indices.items():
+        model = _graph_fit(stats, [m for m in train_nodes if m != int(n)], *key, vidx=vidx)
+        graph_train[pos] = _graph_predict(model, outer_train.iloc[pos], features, n)
+    gb_features = sorted({
+        f for fs in candidates.values() for f in fs if f not in ALL_STATIC
+    })
+    gb = build_benchmark_model("Gradient Boosting", GRAPH_GB_PARAMS)
+    gb.fit(
+        outer_train[gb_features].to_numpy(),
+        outer_train[target].to_numpy() - graph_train,
+        model__sample_weight=equal_node_weights(outer_train, node_col="node"),
+    )
+    pred = g["pred"] + gb.predict(outer_test[gb_features].to_numpy())
+    best_params = {**g["best_params"], "gb": GRAPH_GB_PARAMS, "gb_features": len(gb_features)}
+    return name, best_params, g["inner_mse"], pred
 
 
 # Fourier Helpers
@@ -1437,14 +1800,18 @@ def benchmark_target_nested_loo(
 
         for model_name in model_names:
 
-            if model_name == GRAPH_MODEL_NAME:
+            if model_name in (GRAPH_MODEL_NAME, GRAPH_GB_NAME):
 
                 (
                     feature_set,
                     best_params,
                     inner_mse,
                     pred
-                ) = fit_predict_graph_laplacian(
+                ) = (
+                    fit_predict_graph_laplacian
+                    if model_name == GRAPH_MODEL_NAME
+                    else fit_predict_graph_gb
+                )(
                     outer_train,
                     outer_test,
                     target,
@@ -1911,6 +2278,12 @@ benchmark_config = {
                       " (built from the compressed graph, same Kron/scaling)",
         "extended": GRAPH_EXTENDED,
         "average_top": GRAPH_AVERAGE_TOP,
+        "select": GRAPH_SELECT,
+        "varying": GRAPH_VARYING_COLS,
+        "dam_resistance": DAM_RESISTANCE,
+        "dams_on_network": len(DAMS_ON_EDGE),
+        "tailup_ranges_km": list(TAILUP_RANGES_KM),
+        "graph_gb_params": GRAPH_GB_PARAMS,
         "discharge": DISCHARGE_MODE or "off",
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
@@ -2000,7 +2373,7 @@ rmse_table.to_csv(
 # Best Conventional Models
 best_conventional = (
     benchmark_results[
-        benchmark_results["Model"] != GRAPH_MODEL_NAME
+        ~benchmark_results["Model"].isin([GRAPH_MODEL_NAME, GRAPH_GB_NAME])
     ]
     .sort_values(
         "R2",
