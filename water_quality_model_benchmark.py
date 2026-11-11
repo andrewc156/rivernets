@@ -191,12 +191,12 @@ for _name, _L in EFFECTIVE_LAPLACIANS.items():
 def compressed_kron_laplacian(edge_weight):
     """Kron reduction of the 67-node compressed graph onto the WQ nodes, with the
     notebook's clean-up (symmetrise, zero row sums) and scaling (mean positive
-    diagonal = 1). edge_weight(data) gives each compressed edge's weight."""
+    diagonal = 1). edge_weight(u, v, data) gives each compressed edge's weight."""
     order = list(_G_master.nodes())
     pos = {n: i for i, n in enumerate(order)}
     L = np.zeros((len(order), len(order)))
     for u, v, data in _G_master.to_undirected(as_view=True).edges(data=True):
-        w = edge_weight(data)
+        w = edge_weight(u, v, data)
         i, j = pos[u], pos[v]
         L[i, j] -= w
         L[j, i] -= w
@@ -216,7 +216,7 @@ def compressed_kron_laplacian(edge_weight):
 
 # Check: rebuilding distance_only this way reproduces the saved matrix, so the
 # node order and scaling of the new Laplacian below match the saved ones.
-_check = compressed_kron_laplacian(lambda data: 1000.0 / float(data["length_m"]))
+_check = compressed_kron_laplacian(lambda u, v, data: 1000.0 / float(data["length_m"]))
 if not np.allclose(_check, EFFECTIVE_LAPLACIANS["distance_only"], rtol=1e-8, atol=1e-10):
     raise ValueError("Rebuilt distance_only Laplacian does not match the saved one.")
 
@@ -225,7 +225,27 @@ if not np.allclose(_check, EFFECTIVE_LAPLACIANS["distance_only"], rtol=1e-8, ato
 # stations is the number of reaches between them. Without weights the original
 # and compressed graphs are NOT equivalent; unweighted on the original 67k graph
 # is almost identical to distance_only (compare_edge_weights.py).
-EFFECTIVE_LAPLACIANS["unweighted_compressed"] = compressed_kron_laplacian(lambda data: 1.0)
+EFFECTIVE_LAPLACIANS["unweighted_compressed"] = compressed_kron_laplacian(lambda u, v, data: 1.0)
+
+# length_pow_a: w = length_km^(-a), a continuous family between the two above
+# (a = 0 is unweighted_compressed, a = 1 is distance_only). The inner loop picks a.
+for _a in (0.25, 0.5, 0.75):
+    EFFECTIVE_LAPLACIANS[f"length_pow_{_a}"] = compressed_kron_laplacian(
+        lambda u, v, data, a=_a: (float(data["length_m"]) / 1000.0) ** (-a)
+    )
+
+# confluence_compressed: the graph distance between two stations counts the
+# confluences (nodes of degree >= 3) between them. Each edge has resistance
+# 0.5 per confluence at its ends plus CONFLUENCE_EPS, so a node the path merely
+# passes through (another station or gauge) adds only CONFLUENCE_EPS and nearby
+# stations with no confluence between them are not fused into one.
+CONFLUENCE_EPS = 0.1
+_degree = dict(_G_master.to_undirected(as_view=True).degree())
+EFFECTIVE_LAPLACIANS["confluence_compressed"] = compressed_kron_laplacian(
+    lambda u, v, data: 1.0 / (
+        0.5 * (_degree[u] >= 3) + 0.5 * (_degree[v] >= 3) + CONFLUENCE_EPS
+    )
+)
 
 # BENCHMARK_GRAPH_WEIGHTINGS restricts which weightings the inner loop may pick.
 _weightings = [w for w in os.environ.get("BENCHMARK_GRAPH_WEIGHTINGS", "").split(",") if w]
@@ -235,16 +255,31 @@ if _weightings:
         raise ValueError(f"Unknown BENCHMARK_GRAPH_WEIGHTINGS: {_unknown}")
     EFFECTIVE_LAPLACIANS = {w: EFFECTIVE_LAPLACIANS[w] for w in _weightings}
 
-# Lambda grid: the saved grid plus smaller values. With the unweighted
-# compressed Laplacian the inner loop chose the smallest saved value (0.01) in
-# most folds, so the grid is extended downward. BENCHMARK_GRAPH_LAMBDA_GRID
-# overrides it, e.g. "0.01,0.03,0.1,0.3,1,3,10,30,100" for the saved grid only.
+# Lambda grid: the saved grid widened at both ends (1e-6 ... 3000). Earlier
+# runs chose the bottom of the grid for pH and the top for water temperature.
+# BENCHMARK_GRAPH_LAMBDA_GRID overrides it, e.g.
+# "0.01,0.03,0.1,0.3,1,3,10,30,100" for the saved grid only.
 _lambda_env = os.environ.get("BENCHMARK_GRAPH_LAMBDA_GRID", "")
 if _lambda_env:
     GRAPH_LAMBDA_GRID = [float(x) for x in _lambda_env.split(",") if x]
 else:
-    GRAPH_LAMBDA_GRID = sorted({0.0001, 0.001, 0.003, *map(float, GRAPH_LAMBDA_GRID)})
+    GRAPH_LAMBDA_GRID = sorted({
+        1e-6, 1e-5, 0.0001, 0.001, 0.003,
+        *map(float, GRAPH_LAMBDA_GRID),
+        300.0, 1000.0, 3000.0
+    })
 print("Graph lambda grid:", GRAPH_LAMBDA_GRID)
+
+# Log targets: for these targets the graph model may also be fitted on
+# log(1 + y) (turbidity has a few zeros). Predictions are transformed back with
+# a node-weighted smearing correction, and raw vs log is chosen by the inner-LOO
+# MSE on the original scale. Set BENCHMARK_GRAPH_LOG_TARGETS="" to turn it off.
+GRAPH_LOG_TARGETS = [
+    t for t in os.environ.get(
+        "BENCHMARK_GRAPH_LOG_TARGETS", "Turbidity,Specific conductance"
+    ).split(",") if t
+]
+print("Graph log-target candidates:", GRAPH_LOG_TARGETS)
 
 print(
     "Graph-Laplacian:",
@@ -364,28 +399,83 @@ def _graph_inner_scores(stats):
     return {k: t / len(train_nodes) for k, t in totals.items()}
 
 
-def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
-    """Inner-LOO choice of (feature set, weighting, lambda, lambda_beta), refit
-    on the outer training nodes, predict the held-out node. Same selection
-    criterion as tune_model_inner_loo: the mean of the per-node validation MSE.
-    The search is always joint: the graph model is solved exactly from per-node
-    moments, so it is cheap."""
+def _graph_search(train_df, target, candidates):
+    """Best (inner MSE, feature set, (scheme, lambda, lambda_beta), stats)."""
     best = None
     for name, features in candidates.items():
-        stats = graph_node_stats(outer_train, target, features)
+        stats = graph_node_stats(train_df, target, features)
         scores = _graph_inner_scores(stats)
         key = min(scores, key=scores.get)
         if best is None or scores[key] < best[0]:
             best = (scores[key], name, key, stats)
-    inner_mse, name, (scheme, lam, lb), stats = best
-    features = candidates[name]
-    model = _graph_solve(
-        _graph_prepare(_graph_train_moments(stats, sorted(stats)), EFFECTIVE_LAPLACIANS[scheme], lam), lb
+    return best
+
+
+def _graph_fit(stats, nodes, scheme, lam, lb):
+    return _graph_solve(
+        _graph_prepare(_graph_train_moments(stats, nodes), EFFECTIVE_LAPLACIANS[scheme], lam), lb
     )
+
+
+def _graph_predict(model, df, features, node):
+    Z = (df[features].to_numpy(dtype=float) - model["mean_x"]) / model["std_x"]
+    return np.column_stack((np.ones(len(Z)), Z)) @ _graph_coef(model, node)
+
+
+def _graph_log_predict(by_node, stats, features, key, train_nodes, test_df, test_node, target):
+    """Fit on log(1 + y) of train_nodes, predict test_df on the original scale.
+    Back-transform with Duan's smearing factor, averaged with equal weight per
+    training node: y_hat = exp(f) * mean(exp(residual)) - 1."""
+    scheme, lam, lb = key
+    model = _graph_fit(stats, train_nodes, scheme, lam, lb)
+    smear = np.mean([
+        np.mean(np.exp(
+            by_node[n][target].to_numpy(dtype=float) - _graph_predict(model, by_node[n], features, n)
+        ))
+        for n in train_nodes
+    ])
+    return np.exp(_graph_predict(model, test_df, features, test_node)) * smear - 1.0
+
+
+def fit_predict_graph_laplacian(outer_train, outer_test, target, candidates):
+    """Inner-LOO choice of (feature set, weighting, lambda, lambda_beta), and for
+    GRAPH_LOG_TARGETS also raw vs log(1 + y), then refit on the outer training
+    nodes and predict the held-out node. Same selection criterion as
+    tune_model_inner_loo: the mean of the per-node validation MSE, always on the
+    original scale. The search is joint: the graph model is solved exactly from
+    per-node moments, so it is cheap. For the log option the settings are tuned
+    in log space and then scored on the original scale over the same inner folds."""
     test_node = outer_test["node"].iloc[0]
-    Z = (outer_test[features].to_numpy(dtype=float) - model["mean_x"]) / model["std_x"]
-    pred = np.column_stack((np.ones(len(Z)), Z)) @ _graph_coef(model, test_node)
-    best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb}
+    choice = ("none", *_graph_search(outer_train, target, candidates))
+
+    if target in GRAPH_LOG_TARGETS:
+        log_train = outer_train.copy()
+        log_train[target] = np.log1p(log_train[target])
+        _, name, key, stats = _graph_search(log_train, target, candidates)
+        by_node = {int(n): g for n, g in log_train.groupby("node")}
+        train_nodes = sorted(stats)
+        node_mse = []
+        for val in train_nodes:
+            pred = _graph_log_predict(
+                by_node, stats, candidates[name], key,
+                [n for n in train_nodes if n != val], by_node[val], val, target
+            )
+            y = np.expm1(by_node[val][target].to_numpy(dtype=float))
+            node_mse.append(np.mean((y - pred) ** 2))
+        log_mse = float(np.mean(node_mse))
+        if log_mse < choice[1]:
+            choice = ("log1p", log_mse, name, key, stats)
+
+    transform, inner_mse, name, key, stats = choice
+    features = candidates[name]
+    if transform == "none":
+        pred = _graph_predict(_graph_fit(stats, sorted(stats), *key), outer_test, features, test_node)
+    else:
+        pred = _graph_log_predict(
+            by_node, stats, features, key, sorted(stats), outer_test, test_node, target
+        )
+    scheme, lam, lb = key
+    best_params = {"scheme": scheme, "lambda": lam, "lambda_beta": lb, "transform": transform}
     return name, best_params, inner_mse, pred
 
 
@@ -1706,7 +1796,10 @@ benchmark_config = {
         MODEL_NAMES,
     "graph_laplacian": {
         "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled)"
-                      " + unweighted_compressed (built from the compressed graph, same Kron/scaling)",
+                      " + unweighted_compressed, length_pow_{0.25,0.5,0.75} and confluence_compressed"
+                      " (built from the compressed graph, same Kron/scaling)",
+        "confluence_eps": CONFLUENCE_EPS,
+        "log_target_candidates": GRAPH_LOG_TARGETS,
         "weightings": list(EFFECTIVE_LAPLACIANS),
         "lambda_grid": GRAPH_LAMBDA_GRID,
         "lambda_beta_grid": GRAPH_BETA_GRID,
