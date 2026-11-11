@@ -1,0 +1,118 @@
+{
+  "Turbidity": {
+    "configured": [
+      "local_slope",
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1"
+    ],
+    "K=1 | none": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1"
+    ],
+    "K=1 | reduced": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "elevation_m",
+      "log_upa",
+      "local_slope"
+    ],
+    "K=2 | none": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2"
+    ],
+    "K=2 | local_slope": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2",
+      "local_slope"
+    ],
+    "K=2 | reduced": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2",
+      "elevation_m",
+      "log_upa",
+      "local_slope"
+    ],
+    "K=4 | none": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2",
+      "hour_sin_3",
+      "hour_cos_3",
+      "doy_sin_3",
+      "doy_cos_3",
+      "hour_sin_4",
+      "hour_cos_4",
+      "doy_sin_4",
+      "doy_cos_4"
+    ],
+    "K=4 | local_slope": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2",
+      "hour_sin_3",
+      "hour_cos_3",
+      "doy_sin_3",
+      "doy_cos_3",
+      "hour_sin_4",
+      "hour_cos_4",
+      "doy_sin_4",
+      "doy_cos_4",
+      "local_slope"
+    ],
+    "K=4 | reduced": [
+      "hour_sin_1",
+      "hour_cos_1",
+      "doy_sin_1",
+      "doy_cos_1",
+      "hour_sin_2",
+      "hour_cos_2",
+      "doy_sin_2",
+      "doy_cos_2",
+      "hour_sin_3",
+      "hour_cos_3",
+      "doy_sin_3",
+      "doy_cos_3",
+      "hour_sin_4",
+      "hour_cos_4",
+      "doy_sin_4",
+      "doy_cos_4",
+      "elevation_m",
+      "log_upa",
+      "local_slope"
+    ]
+  }
+}

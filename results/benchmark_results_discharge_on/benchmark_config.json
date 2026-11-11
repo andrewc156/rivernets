@@ -1,0 +1,91 @@
+{
+  "random_state": 42,
+  "ridge_alphas": [
+    0.03,
+    0.1,
+    0.3,
+    1.0,
+    3.0,
+    10.0
+  ],
+  "models": [
+    "Graph-Laplacian",
+    "OLS",
+    "Ridge",
+    "Elastic Net",
+    "Spline GAM"
+  ],
+  "graph_laplacian": {
+    "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled) + unweighted_compressed, length_pow_{0.25,0.5,0.75} and confluence_compressed (built from the compressed graph, same Kron/scaling)",
+    "extended": false,
+    "average_top": 1,
+    "discharge": "on",
+    "confluence_eps": 0.1,
+    "log_target_candidates": [],
+    "weightings": [
+      "distance_only",
+      "area",
+      "width",
+      "slope",
+      "area_width",
+      "unweighted_compressed"
+    ],
+    "lambda_grid": [
+      0.0001,
+      0.001,
+      0.003,
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0,
+      30.0,
+      100.0
+    ],
+    "lambda_beta_grid": [
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "tuned_by": "inner leave-one-node-out, same folds and rows as the other models"
+  },
+  "feature_selection": {
+    "mode": "inner",
+    "search": "two_stage",
+    "fourier_K": [
+      1,
+      2,
+      4
+    ],
+    "static_options": [
+      "none",
+      "local_slope",
+      "reduced"
+    ],
+    "inner_row_stride": 1,
+    "chemistry": {
+      "Water temperature": [
+        "Specific conductance"
+      ],
+      "DO concentration": [
+        "Water temperature",
+        "Specific conductance"
+      ],
+      "Specific conductance": [
+        "Water temperature"
+      ],
+      "pH": [
+        "Specific conductance"
+      ],
+      "Turbidity": []
+    },
+    "selected_by": "inner leave-one-node-out MSE; candidates in feature_configs.json"
+  },
+  "validation": "Nested leave-one-node-out",
+  "training_weighting": "Equal total weight per monitoring node"
+}
