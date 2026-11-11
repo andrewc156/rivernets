@@ -100,8 +100,8 @@ def main():
     plan = plan[plan["variable"].isin(VARIABLES)]
     meta = pd.read_csv("data/usgs/usgs_28stations_metadata.csv", low_memory=False)
     meta = meta[meta["variable"].isin(VARIABLES)]
-    meta["begin"] = pd.to_datetime(meta["begin"], utc=True, errors="coerce")
-    meta["end"] = pd.to_datetime(meta["end"], utc=True, errors="coerce")
+    meta["begin"] = pd.to_datetime(meta["begin"], utc=True, format="ISO8601")
+    meta["end"] = pd.to_datetime(meta["end"], utc=True, format="ISO8601")
     span = meta.groupby(["monitoring_location_id", "variable"]).agg(begin=("begin", "min"), end=("end", "max"))
 
     session = requests.Session()
