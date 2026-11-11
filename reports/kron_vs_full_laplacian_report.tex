@@ -788,7 +788,15 @@ Local slope          & $+$0.150   & $+$0.050 & $-$0.046 & $-$0.007 & $-$0.005 \\
 \paragraph{Reading the two tables together.} The static variables and the graph term are all constant
 within a station, so they compete to explain the same between-station differences. A variable with a
 large reverse-ablation gain but a small ablation loss is useful but redundant (for example the annual
-cycle for DO, and slope for water temperature). Note also that the full model is not the best model:
+cycle for DO, and slope for water temperature). The opposite also occurs. For specific conductance,
+slope alone \emph{hurts} ($-0.046$), yet removing it from the full model costs $0.150$, the
+second-largest loss for that target. Elevation shows the same pattern on a smaller scale ($+0.009$
+alone, $-0.042$ when removed). So slope does not predict conductance by itself; it corrects the
+between-station pattern that the graph term captures. For DO, the graph term alone is worse than the
+intercept-only model ($-0.107$): smoothing DO along the network makes predictions at unseen stations
+worse. DO varies much more over time (with temperature, and between day and night) than between
+stations, so the graph term has little real spatial signal to work with. In the full model its effect
+is negligible ($-0.008$). Note also that the full model is not the best model:
 for specific conductance it scores $0.315$, against $0.385$ for the selected model in
 Table~\ref{tab:final}, because log area and log width hurt it. That is why the benchmark selects
 features rather than using all of them.
