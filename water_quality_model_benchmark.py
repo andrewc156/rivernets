@@ -61,7 +61,21 @@ DISCHARGE_MODE = os.environ.get("BENCHMARK_DISCHARGE", "")
 if DISCHARGE_MODE not in ("", "baseline", "on"):
     raise ValueError("BENCHMARK_DISCHARGE must be '', 'baseline' or 'on'")
 
-if DISCHARGE_MODE:
+# Held-out time period (opt-in): BENCHMARK_TIME_SPLIT=YYYY-MM-DD keeps the
+# leave-one-station-out folds but also splits in time: every model (and its
+# inner loop) is trained on the other stations' rows BEFORE the cutoff, and is
+# tested on the held-out station's rows ON OR AFTER it. A station needs at least
+# TIME_SPLIT_MIN_HOURS rows on a side to train or to be tested. The cutoff
+# 2026-01-01 was fixed from station coverage alone, before any results: most
+# records start in October 2025, so a water-year split would leave 6-9 training
+# stations. The test is the 2026 spring-summer season at stations never seen.
+TIME_SPLIT = os.environ.get("BENCHMARK_TIME_SPLIT", "")
+TIME_SPLIT_MIN_HOURS = int(os.environ.get("BENCHMARK_TIME_SPLIT_MIN_HOURS", "720"))
+TIME_CUTOFF = pd.Timestamp(TIME_SPLIT, tz="UTC") if TIME_SPLIT else None
+
+if TIME_SPLIT:
+    _default_results = "results/benchmark_results_time_split"
+elif DISCHARGE_MODE:
     _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
 elif FEATURE_SELECTION == "fixed":
     _default_results = "results/benchmark_results"
@@ -1707,7 +1721,8 @@ def benchmark_target_nested_loo(
     required = [
         node_col,
         target,
-        *features_union
+        *features_union,
+        *(["time"] if TIME_SPLIT else [])
     ]
 
     work = (
@@ -1732,6 +1747,17 @@ def benchmark_target_nested_loo(
         .drop_duplicates()
         .tolist()
     )
+
+    if TIME_SPLIT:
+        before = pd.to_datetime(work["time"], utc=True) < TIME_CUTOFF
+        n_before = work[before].groupby(node_col).size()
+        n_after = work[~before].groupby(node_col).size()
+        train_nodes_ok = set(n_before[n_before >= TIME_SPLIT_MIN_HOURS].index)
+        nodes = [n for n in nodes if n_after.get(n, 0) >= TIME_SPLIT_MIN_HOURS]
+        print(
+            f"Time split {TIME_SPLIT}: {len(train_nodes_ok)} training stations, "
+            f"{len(nodes)} test stations"
+        )
 
     print(
         "\nTarget:",
@@ -1790,6 +1816,13 @@ def benchmark_target_nested_loo(
                 == test_node
             ]
         )
+
+        if TIME_SPLIT:
+            outer_train = outer_train[
+                before.loc[outer_train.index]
+                & outer_train[node_col].isin(train_nodes_ok)
+            ]
+            outer_test = outer_test[~before.loc[outer_test.index]]
 
         y_test = (
             outer_test[
@@ -2285,6 +2318,8 @@ benchmark_config = {
         "tailup_ranges_km": list(TAILUP_RANGES_KM),
         "graph_gb_params": GRAPH_GB_PARAMS,
         "discharge": DISCHARGE_MODE or "off",
+        "time_split": TIME_SPLIT or "off",
+        "time_split_min_hours": TIME_SPLIT_MIN_HOURS,
         "confluence_eps": CONFLUENCE_EPS,
         "log_target_candidates": GRAPH_LOG_TARGETS,
         "weightings": list(EFFECTIVE_LAPLACIANS),
