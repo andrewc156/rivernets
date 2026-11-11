@@ -115,7 +115,7 @@ def main():
     jobs = []
     for _, row in plan.iterrows():
         key = (row["station_id"], row["variable"])
-        if key not in span.index:
+        if key not in span.index or pd.isna(span.loc[key, "begin"]) or pd.isna(span.loc[key, "end"]):
             continue
         begin = max(HISTORY_START, span.loc[key, "begin"])
         end = span.loc[key, "end"]
