@@ -1102,6 +1102,99 @@ in feature set (in 92\% and 84\% of folds for the default model), so their predi
 the same. Averaging stays off by default.
 
 % =====================================================================
+\section{Five further graph-model ideas}
+\label{sec:ideas}
+
+Five changes were implemented as opt-in options of the benchmark and run graph-only on the rows and
+folds of Table~\ref{tab:final}. The target each one was meant to help was written down before the
+runs. With about 25 comparisons, changes on the other targets are treated as noise unless they are
+large.
+\begin{enumerate}
+  \item \textbf{Dams} (\code{distance\_dams}, \code{unweighted\_dams}). Each large storage dam adds a
+        resistance of $10\times$ the median reach resistance to its reach, in series. 8 of 13
+        hand-listed dams lie on the network; Glen Canyon separates 22 from 3 stations, Hoover, Davis
+        and Parker isolate one station, Flaming Gorge separates 1 from 7. The dams change the
+        geometry (effective-resistance correlation with the dam-free matrix $0.92$ for distance,
+        $0.69$ for unweighted). \emph{Meant for} water temperature and turbidity.
+  \item \textbf{Flow-directed covariance} (\code{tailup\_100}, \code{\_300}, \code{\_1000}). The
+        exponential tail-up model of Ver Hoef et al.\ (2006): stations are correlated only along the
+        flow path, $C_{ij}=\sqrt{A_i/A_j}\,e^{-d_{ij}/r}$ with upstream areas $A$, river distance
+        $d$ and range $r$ in km. Its inverse replaces $L_{\text{eff}}$, without the sum-to-zero
+        constraint. \emph{Meant for} specific conductance and pH.
+  \item \textbf{REML} (\code{BENCHMARK\_GRAPH\_SELECT=reml}). Weighting and $\lambda$ are chosen by
+        restricted likelihood of the station-mean residuals (static MERIT predictors as fixed
+        effects), feature set and $\lambda_\beta$ still by inner LOO. \emph{Meant for} more stable
+        choices on every target.
+  \item \textbf{Network-varying seasonal cycle} (\code{BENCHMARK\_GRAPH\_VARYING=annual}).
+        Station-specific coefficients on the first annual harmonic, smoothed over the graph with
+        their own $\lambda_v$. \emph{Meant for} water temperature, DO and turbidity.
+  \item \textbf{Graph + gradient boosting} (model \code{Graph-Laplacian + GB}). Gradient boosting
+        fitted to the graph model's out-of-station residuals, with time-varying predictors only and
+        one setting fixed in advance. \emph{Meant for} turbidity and DO.
+\end{enumerate}
+The solvers were checked against brute-force penalised least squares (agreement $10^{-13}$), and the
+default model still reproduces Table~\ref{tab:final} exactly.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Change in $R^2$ against the main graph model (Table~\ref{tab:final}), on the same rows and
+folds, with the station-bootstrap 95\% interval. $^\dagger$: a target the idea was meant to help.
+The varying-coefficient run finished only water temperature. The last row compares the hybrid with
+gradient boosting of Table~\ref{tab:final}.}
+\label{tab:ideas}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l l l l l}
+\toprule
+Idea & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Dams          & $-0.001^\dagger$ ($-0.002$, $0.000$) & $+0.014$ ($0.002$, $0.032$) & $0.000$ & $+0.006$ ($0.000$, $0.015$) & $+0.002^\dagger$ ($-0.001$, $0.002$) \\
+Tail-up       & $0.000$ ($-0.001$, $0.001$) & $-0.007$ ($-0.034$, $0.016$) & $-0.227^\dagger$ ($-0.380$, $0.000$) & $+0.004^\dagger$ ($0.000$, $0.016$) & $+0.011$ ($0.001$, $0.055$) \\
+REML          & $0.000^\dagger$ ($-0.001$, $0.000$) & $+0.015^\dagger$ ($-0.001$, $0.037$) & $-0.153^\dagger$ ($-0.510$, $-0.020$) & $-0.115^\dagger$ ($-0.208$, $-0.032$) & $-0.006^\dagger$ ($-0.044$, $0.000$) \\
+Varying       & $-0.022^\dagger$ ($-0.053$, $0.002$) & -- & -- & -- & -- \\
+Graph + GB    & $-0.018$ ($-0.048$, $0.006$) & $-0.009^\dagger$ ($-0.054$, $0.021$) & $-0.015$ ($-0.115$, $0.024$) & $+0.051$ ($-0.158$, $0.273$) & $+0.244^\dagger$ ($-0.024$, $0.341$) \\
+\midrule
+Graph + GB, $R^2$ & $0.845$ & $0.690$ & $0.369$ & $0.169$ & $0.349$ \\
+\quad vs gradient boosting & $+0.013$ & $-0.043$ ($-0.074$, $-0.010$) & $+0.463$ & $+0.340$ & $-0.042$ ($-0.479$, $0.064$) \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Results} (Table~\ref{tab:ideas}).
+\begin{itemize}
+  \item \textbf{Dams} do nothing for their intended targets: water temperature chose a dam
+        weighting in 1 of 24 folds and turbidity in 4 of 17. DO chose one in 14 of 17 folds and
+        gained $0.014$ (interval $0.002$ to $0.032$, 9 stations better, 5 worse), but DO was not an
+        intended target, so this is a hypothesis for another dataset, not a result.
+  \item \textbf{Tail-up} was chosen often (water temperature 24/24, turbidity 16/17, DO 13/17) but
+        changed no intended target for the better. The specific conductance loss of $0.227$ comes
+        from a single fold: at the highest-conductance station (96751415) the inner loop switched
+        to \code{tailup\_1000} and another feature set; every other fold is unchanged. It shows how
+        much one station can move the specific conductance $R^2$, rather than a systematic effect.
+  \item \textbf{REML makes things worse, and is not more stable.} It loses $0.153$ for specific
+        conductance and $0.115$ for pH, with both intervals excluding zero, and the number of
+        distinct choices across folds goes up (specific conductance: feature sets $3\to5$,
+        (weighting, $\lambda$) pairs $2\to4$). For pH it chooses $\lambda=100$ in 11 of 19 folds,
+        where the inner LOO chose $10^{-4}$ in 16 of 19: the likelihood treats the station offsets
+        as noise, while for predicting a new station they are the useful signal. Prediction-based
+        selection is the right criterion here.
+  \item \textbf{Varying seasonal cycle} (water temperature only): chosen in 23 of 24 folds, yet
+        $-0.022$ (interval $-0.053$ to $0.002$). As with discharge, the inner loop chooses the extra
+        flexibility but the held-out station does not benefit.
+  \item \textbf{Graph + gradient boosting} is the only idea with a large effect. Turbidity rises from
+        $0.104$ to $0.349$ (12 stations better, 5 worse), close to gradient boosting's $0.391$, but
+        the interval ($-0.02$ to $0.34$) crosses zero and one station gives 64\% of the gain. The
+        hybrid keeps the graph model's lead for specific conductance ($0.369$ vs $-0.094$) and pH
+        ($0.169$ vs $-0.171$), costs $0.018$ for water temperature, and is $0.043$ below gradient
+        boosting for DO. It is the only model within about $0.05$ of the best on every target
+        except DO.
+\end{itemize}
+
+\paragraph{Decision.} None of the four changes to the graph model itself is adopted; all stay
+opt-in. Graph + gradient boosting is worth confirming as a single model for all five targets, since
+its turbidity gain is large but rests on 17 stations and partly on one of them.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -1159,6 +1252,12 @@ the same. Averaging stays off by default.
         flow-gauged rows removes training stations, which lowers the graph model's pH $R^2$ from $0.117$ to
         $-0.051$ before discharge is even used (Table~\ref{tab:qsubset}). Averaging the top three
         graph settings changes nothing beyond noise. Both options stay off by default.
+  \item \textbf{Dams, flow-directed covariance, REML and a network-varying seasonal cycle do not
+        improve the graph model} (Section~\ref{sec:ideas}). REML is clearly worse for specific
+        conductance and pH, because it treats the station offsets as noise. Only graph + gradient
+        boosting changes a target materially: turbidity $0.104\to0.349$, close to gradient boosting
+        ($0.391$), while keeping the graph model's lead for specific conductance and pH. The turbidity
+        interval still crosses zero, so this hybrid should be confirmed before it is adopted.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 14--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -1222,5 +1321,9 @@ saved in \code{results/discharge\_paired\_comparison.csv} and
 come from graph-only runs at the same commit with \code{BENCHMARK\_GRAPH\_AVERAGE\_TOP=3}, without
 and with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, saved in \code{results/avg3\_default/} and
 \code{results/avg3\_extended/}.
+Table~\ref{tab:ideas} comes from server runs at commit \code{4949dbe}, saved in
+\code{results/idea\_dams/}, \code{idea\_tailup/}, \code{idea\_reml/}, \code{idea\_varying/}
+(water temperature only) and \code{idea\_graph\_gb/}. The paired comparisons come from
+\code{compare\_runs.py} and are saved as \code{results/idea\_*\_vs\_*.csv}.
 
 \end{document}
