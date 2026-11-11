@@ -1,0 +1,320 @@
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/results/benchmark_results_graph_improved
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Graph lambda grid: [1e-06, 1e-05, 0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0, 1000.0, 3000.0]
+Graph log-target candidates: ['Turbidity', 'Specific conductance']
+Graph-Laplacian: 10 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed', 'length_pow_0.25', 'length_pow_0.5', 'length_pow_0.75', 'confluence_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Water temperature', 'DO concentration', 'Specific conductance', 'pH', 'Turbidity']
+Models: ['Graph-Laplacian']
+
+================================================================================
+STARTING: Water temperature
+================================================================================
+
+Target: Water temperature
+Nodes: 24
+Rows: 144,980
+Feature candidates: 10
+Outer fold 1/24 | node 47787846Outer fold 2/24 | node 58738608Outer fold 3/24 | node 67739434Outer fold 4/24 | node 75465016Outer fold 5/24 | node 81497938Outer fold 6/24 | node 82982643Outer fold 7/24 | node 83027786Outer fold 8/24 | node 83222751Outer fold 9/24 | node 84197086Outer fold 10/24 | node 88786999Outer fold 11/24 | node 90706215Outer fold 12/24 | node 92116891Outer fold 13/24 | node 93300040Outer fold 14/24 | node 93392084Outer fold 15/24 | node 96496279Outer fold 16/24 | node 96751415Outer fold 17/24 | node 97532807Outer fold 18/24 | node 110911305Outer fold 19/24 | node 126377584Outer fold 20/24 | node 131520862Outer fold 21/24 | node 133114453Outer fold 22/24 | node 134075067Outer fold 23/24 | node 186559442Outer fold 24/24 | node 203177183
+
+Saved: Water temperature
+           Target           Model  Nodes   Rows       R2   RMSE
+Water temperature Graph-Laplacian     24 144980 0.863478 2.6191
+
+================================================================================
+STARTING: DO concentration
+================================================================================
+
+Target: DO concentration
+Nodes: 17
+Rows: 114,607
+Feature candidates: 9
+Outer fold 1/17 | node 67739434Outer fold 2/17 | node 81497938Outer fold 3/17 | node 82982643Outer fold 4/17 | node 83027786Outer fold 5/17 | node 83222751Outer fold 6/17 | node 84197086Outer fold 7/17 | node 88786999Outer fold 8/17 | node 90706215Outer fold 9/17 | node 92116891Outer fold 10/17 | node 93300040Outer fold 11/17 | node 93392084Outer fold 12/17 | node 96496279Outer fold 13/17 | node 97532807Outer fold 14/17 | node 126377584Outer fold 15/17 | node 131520862Outer fold 16/17 | node 186559442Outer fold 17/17 | node 203177183
+
+Saved: DO concentration
+          Target           Model  Nodes   Rows       R2     RMSE
+DO concentration Graph-Laplacian     17 114607 0.702567 0.967256
+
+================================================================================
+STARTING: Specific conductance
+================================================================================
+
+Target: Specific conductance
+Nodes: 24
+Rows: 144,980
+Feature candidates: 10
+Outer fold 1/24 | node 47787846Outer fold 2/24 | node 58738608Outer fold 3/24 | node 67739434Outer fold 4/24 | node 75465016Outer fold 5/24 | node 81497938Outer fold 6/24 | node 82982643Outer fold 7/24 | node 83027786Outer fold 8/24 | node 83222751Outer fold 9/24 | node 84197086Outer fold 10/24 | node 88786999Outer fold 11/24 | node 90706215Outer fold 12/24 | node 92116891Outer fold 13/24 | node 93300040Outer fold 14/24 | node 93392084Outer fold 15/24 | node 96496279Outer fold 16/24 | node 96751415Outer fold 17/24 | node 97532807Outer fold 18/24 | node 110911305Outer fold 19/24 | node 126377584Outer fold 20/24 | node 131520862Outer fold 21/24 | node 133114453Outer fold 22/24 | node 134075067Outer fold 23/24 | node 186559442Outer fold 24/24 | node 203177183
+
+Saved: Specific conductance
+              Target           Model  Nodes   Rows       R2       RMSE
+Specific conductance Graph-Laplacian     24 144980 0.351045 357.368517
+
+================================================================================
+STARTING: pH
+================================================================================
+
+Target: pH
+Nodes: 19
+Rows: 121,011
+Feature candidates: 9
+Outer fold 1/19 | node 67739434Outer fold 2/19 | node 81497938Outer fold 3/19 | node 82982643Outer fold 4/19 | node 83027786Outer fold 5/19 | node 83222751Outer fold 6/19 | node 84197086Outer fold 7/19 | node 88786999Outer fold 8/19 | node 90706215Outer fold 9/19 | node 93300040Outer fold 10/19 | node 93392084Outer fold 11/19 | node 96496279Outer fold 12/19 | node 97532807Outer fold 13/19 | node 126377584Outer fold 14/19 | node 129078768Outer fold 15/19 | node 131520862Outer fold 16/19 | node 133114453Outer fold 17/19 | node 134075067Outer fold 18/19 | node 186559442Outer fold 19/19 | node 203177183
+
+Saved: pH
+Target           Model  Nodes   Rows       R2     RMSE
+    pH Graph-Laplacian     19 121011 0.124826 0.221651
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+
+Target: Turbidity
+Nodes: 17
+Rows: 90,843
+Feature candidates: 9
+Outer fold 1/17 | node 67739434Outer fold 2/17 | node 81497938Outer fold 3/17 | node 82982643Outer fold 4/17 | node 83027786Outer fold 5/17 | node 83222751Outer fold 6/17 | node 84197086Outer fold 7/17 | node 88786999Outer fold 8/17 | node 90706215Outer fold 9/17 | node 93300040Outer fold 10/17 | node 93392084Outer fold 11/17 | node 96496279Outer fold 12/17 | node 97532807Outer fold 13/17 | node 126377584Outer fold 14/17 | node 129078768Outer fold 15/17 | node 131520862Outer fold 16/17 | node 133114453Outer fold 17/17 | node 134075067
+
+Saved: Turbidity
+   Target           Model  Nodes  Rows       R2       RMSE
+Turbidity Graph-Laplacian     17 90843 0.102344 533.984635
+              Target           Model  Nodes   Rows       R2       RMSE
+    DO concentration Graph-Laplacian     17 114607 0.702567   0.967256
+Specific conductance Graph-Laplacian     24 144980 0.351045 357.368517
+           Turbidity Graph-Laplacian     17  90843 0.102344 533.984635
+   Water temperature Graph-Laplacian     24 144980 0.863478   2.619100
+                  pH Graph-Laplacian     19 121011 0.124826   0.221651
+Saved master metrics.
+Prediction rows: 616,421
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+              target           model          features  outer_folds
+    DO concentration Graph-Laplacian        configured           14
+    DO concentration Graph-Laplacian        K=2 | none            2
+    DO concentration Graph-Laplacian        K=4 | none            1
+Specific conductance Graph-Laplacian        configured           11
+Specific conductance Graph-Laplacian     K=2 | reduced            6
+Specific conductance Graph-Laplacian     K=1 | reduced            4
+Specific conductance Graph-Laplacian K=1 | local_slope            1
+Specific conductance Graph-Laplacian K=2 | local_slope            1
+Specific conductance Graph-Laplacian     K=4 | reduced            1
+           Turbidity Graph-Laplacian        K=4 | none           16
+           Turbidity Graph-Laplacian K=4 | local_slope            1
+   Water temperature Graph-Laplacian        configured           24
+                  pH Graph-Laplacian        K=2 | none           15
+                  pH Graph-Laplacian K=2 | local_slope            2
+                  pH Graph-Laplacian        K=4 | none            1
+                  pH Graph-Laplacian     K=4 | reduced            1
+Saved configs.
+
+R2 TABLE
+
+Model                 Graph-Laplacian
+Target                               
+DO concentration             0.702567
+Specific conductance         0.351045
+Turbidity                    0.102344
+Water temperature            0.863478
+pH                           0.124826
+
+RMSE TABLE
+
+Model                 Graph-Laplacian
+Target                               
+DO concentration             0.967256
+Specific conductance       357.368517
+Turbidity                  533.984635
+Water temperature            2.619100
+pH                           0.221651
+
+BEST CONVENTIONAL MODELS
+
+Empty DataFrame
+Columns: [Target, Model, Nodes, Rows, R2, RMSE]
+Index: []
+
+================================================================================
+Water temperature
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+DO concentration
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+Specific conductance
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+pH
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+              Target           Model  Nodes   Rows       R2       RMSE
+    DO concentration Graph-Laplacian     17 114607 0.702567   0.967256
+Specific conductance Graph-Laplacian     24 144980 0.351045 357.368517
+           Turbidity Graph-Laplacian     17  90843 0.102344 533.984635
+   Water temperature Graph-Laplacian     24 144980 0.863478   2.619100
+                  pH Graph-Laplacian     19 121011 0.124826   0.221651
+Finished.
