@@ -1,0 +1,207 @@
+Weightings: ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed']
+lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+lambda_beta grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Water temperature: 14 stations, 80,592 rows, variables: ['DO concentration', 'Specific conductance', 'pH', 'Turbidity', 'daily cycle', 'annual cycle', 'elevation_m', 'log_upa', 'log_width', 'local_slope', 'graph term']
+DO concentration: 14 stations, 80,592 rows, variables: ['Water temperature', 'Specific conductance', 'pH', 'Turbidity', 'daily cycle', 'annual cycle', 'elevation_m', 'log_upa', 'log_width', 'local_slope', 'graph term']
+Specific conductance: 14 stations, 80,592 rows, variables: ['Water temperature', 'DO concentration', 'pH', 'Turbidity', 'daily cycle', 'annual cycle', 'elevation_m', 'log_upa', 'log_width', 'local_slope', 'graph term']
+pH: 14 stations, 80,592 rows, variables: ['Water temperature', 'DO concentration', 'Specific conductance', 'Turbidity', 'daily cycle', 'annual cycle', 'elevation_m', 'log_upa', 'log_width', 'local_slope', 'graph term']
+Turbidity: 14 stations, 80,592 rows, variables: ['Water temperature', 'DO concentration', 'Specific conductance', 'pH', 'daily cycle', 'annual cycle', 'elevation_m', 'log_upa', 'log_width', 'local_slope', 'graph term']
+120 configurations
+
+  Water temperature     full      (all variables)       R2=0.8857 (3s)
+  Water temperature     base      (intercept only)      R2=-0.0385 (0s)
+  Water temperature     ablation  DO concentration      R2=0.8294 (3s)
+  Water temperature     reverse   DO concentration      R2=0.6818 (0s)
+  Water temperature     ablation  Specific conductance  R2=0.8837 (3s)
+  Water temperature     reverse   Specific conductance  R2=-0.0167 (0s)
+  Water temperature     ablation  pH                    R2=0.9001 (3s)
+  Water temperature     reverse   pH                    R2=-0.0378 (0s)
+  Water temperature     ablation  Turbidity             R2=0.8862 (3s)
+  Water temperature     reverse   Turbidity             R2=0.0074 (0s)
+  Water temperature     ablation  daily cycle           R2=0.8605 (3s)
+  Water temperature     reverse   daily cycle           R2=-0.0303 (0s)
+  Water temperature     ablation  annual cycle          R2=0.6789 (3s)
+  Water temperature     reverse   annual cycle          R2=0.7712 (0s)
+  Water temperature     ablation  elevation_m           R2=0.8897 (3s)
+  Water temperature     reverse   elevation_m           R2=0.0048 (0s)
+  Water temperature     ablation  log_upa               R2=0.8926 (3s)
+  Water temperature     reverse   log_upa               R2=-0.0449 (0s)
+  Water temperature     ablation  log_width             R2=0.8776 (3s)
+  Water temperature     reverse   log_width             R2=-0.0793 (0s)
+  Water temperature     ablation  local_slope           R2=0.8880 (3s)
+  Water temperature     reverse   local_slope           R2=-0.0382 (0s)
+  Water temperature     ablation  graph term            R2=0.8902 (0s)
+  Water temperature     reverse   graph term            R2=0.0585 (2s)
+  DO concentration      full      (all variables)       R2=0.7859 (3s)
+  DO concentration      base      (intercept only)      R2=-0.0263 (0s)
+  DO concentration      ablation  Water temperature     R2=0.6950 (3s)
+  DO concentration      reverse   Water temperature     R2=0.6969 (0s)
+  DO concentration      ablation  Specific conductance  R2=0.7847 (3s)
+  DO concentration      reverse   Specific conductance  R2=0.0945 (0s)
+  DO concentration      ablation  pH                    R2=0.6922 (3s)
+  DO concentration      reverse   pH                    R2=0.1390 (0s)
+  DO concentration      ablation  Turbidity             R2=0.8005 (3s)
+  DO concentration      reverse   Turbidity             R2=0.0166 (0s)
+  DO concentration      ablation  daily cycle           R2=0.7265 (2s)
+  DO concentration      reverse   daily cycle           R2=0.0165 (0s)
+  DO concentration      ablation  annual cycle          R2=0.7753 (3s)
+  DO concentration      reverse   annual cycle          R2=0.5669 (0s)
+  DO concentration      ablation  elevation_m           R2=0.7787 (3s)
+  DO concentration      reverse   elevation_m           R2=0.0359 (0s)
+  DO concentration      ablation  log_upa               R2=0.7941 (3s)
+  DO concentration      reverse   log_upa               R2=0.0503 (0s)
+  DO concentration      ablation  log_width             R2=0.8118 (3s)
+  DO concentration      reverse   log_width             R2=-0.0424 (0s)
+  DO concentration      ablation  local_slope           R2=0.7973 (3s)
+  DO concentration      reverse   local_slope           R2=-0.0266 (0s)
+  DO concentration      ablation  graph term            R2=0.7790 (0s)
+  DO concentration      reverse   graph term            R2=0.0042 (2s)
+  Specific conductance  full      (all variables)       R2=0.2352 (3s)
+  Specific conductance  base      (intercept only)      R2=-0.1014 (0s)
+  Specific conductance  ablation  Water temperature     R2=0.2576 (3s)
+  Specific conductance  reverse   Water temperature     R2=-0.0820 (0s)
+  Specific conductance  ablation  DO concentration      R2=0.2814 (3s)
+  Specific conductance  reverse   DO concentration      R2=0.0163 (0s)
+  Specific conductance  ablation  pH                    R2=0.2494 (3s)
+  Specific conductance  reverse   pH                    R2=-0.1061 (0s)
+  Specific conductance  ablation  Turbidity             R2=0.2391 (3s)
+  Specific conductance  reverse   Turbidity             R2=-0.1048 (0s)
+  Specific conductance  ablation  daily cycle           R2=0.2387 (3s)
+  Specific conductance  reverse   daily cycle           R2=-0.1013 (0s)
+  Specific conductance  ablation  annual cycle          R2=0.0841 (3s)
+  Specific conductance  reverse   annual cycle          R2=0.0448 (0s)
+  Specific conductance  ablation  elevation_m           R2=0.2393 (3s)
+  Specific conductance  reverse   elevation_m           R2=-0.1417 (0s)
+  Specific conductance  ablation  log_upa               R2=0.2390 (3s)
+  Specific conductance  reverse   log_upa               R2=-0.1377 (0s)
+  Specific conductance  ablation  log_width             R2=0.2131 (3s)
+  Specific conductance  reverse   log_width             R2=-0.2259 (0s)
+  Specific conductance  ablation  local_slope           R2=0.2268 (3s)
+  Specific conductance  reverse   local_slope           R2=-0.1060 (0s)
+  Specific conductance  ablation  graph term            R2=-0.1825 (0s)
+  Specific conductance  reverse   graph term            R2=-0.1450 (3s)
+  pH                    full      (all variables)       R2=0.2937 (3s)
+  pH                    base      (intercept only)      R2=-0.0508 (0s)
+  pH                    ablation  Water temperature     R2=0.3527 (3s)
+  pH                    reverse   Water temperature     R2=-0.0548 (0s)
+  pH                    ablation  DO concentration      R2=0.1845 (3s)
+  pH                    reverse   DO concentration      R2=0.1374 (0s)
+  pH                    ablation  Specific conductance  R2=0.3512 (3s)
+  pH                    reverse   Specific conductance  R2=-0.0606 (0s)
+  pH                    ablation  Turbidity             R2=0.2915 (3s)
+  pH                    reverse   Turbidity             R2=-0.0348 (0s)
+  pH                    ablation  daily cycle           R2=0.3022 (3s)
+  pH                    reverse   daily cycle           R2=0.0156 (0s)
+  pH                    ablation  annual cycle          R2=0.2733 (3s)
+  pH                    reverse   annual cycle          R2=-0.0127 (0s)
+  pH                    ablation  elevation_m           R2=0.2872 (3s)
+  pH                    reverse   elevation_m           R2=-0.1177 (0s)
+  pH                    ablation  log_upa               R2=0.3807 (3s)
+  pH                    reverse   log_upa               R2=-0.1201 (0s)
+  pH                    ablation  log_width             R2=0.4059 (3s)
+  pH                    reverse   log_width             R2=-0.0421 (0s)
+  pH                    ablation  local_slope           R2=0.3894 (3s)
+  pH                    reverse   local_slope           R2=-0.0532 (0s)
+  pH                    ablation  graph term            R2=0.2694 (0s)
+  pH                    reverse   graph term            R2=0.0148 (2s)
+  Turbidity             full      (all variables)       R2=-0.0609 (3s)
+  Turbidity             base      (intercept only)      R2=-0.0134 (0s)
+  Turbidity             ablation  Water temperature     R2=-0.0650 (3s)
+  Turbidity             reverse   Water temperature     R2=0.0270 (0s)
+  Turbidity             ablation  DO concentration      R2=-0.0156 (3s)
+  Turbidity             reverse   DO concentration      R2=0.0229 (0s)
+  Turbidity             ablation  Specific conductance  R2=-0.0599 (3s)
+  Turbidity             reverse   Specific conductance  R2=-0.0173 (0s)
+  Turbidity             ablation  pH                    R2=-0.1319 (3s)
+  Turbidity             reverse   pH                    R2=-0.0054 (0s)
+  Turbidity             ablation  daily cycle           R2=-0.0545 (3s)
+  Turbidity             reverse   daily cycle           R2=-0.0134 (0s)
+  Turbidity             ablation  annual cycle          R2=-0.0728 (3s)
+  Turbidity             reverse   annual cycle          R2=0.0491 (0s)
+  Turbidity             ablation  elevation_m           R2=-0.0234 (3s)
+  Turbidity             reverse   elevation_m           R2=-0.0383 (0s)
+  Turbidity             ablation  log_upa               R2=-0.1471 (3s)
+  Turbidity             reverse   log_upa               R2=-0.0574 (0s)
+  Turbidity             ablation  log_width             R2=-0.0378 (3s)
+  Turbidity             reverse   log_width             R2=-0.0417 (0s)
+  Turbidity             ablation  local_slope           R2=-0.0588 (3s)
+  Turbidity             reverse   local_slope           R2=-0.0137 (0s)
+  Turbidity             ablation  graph term            R2=-0.0392 (0s)
+  Turbidity             reverse   graph term            R2=-0.0120 (2s)
+
+Water temperature   full R2 = 0.8857   base R2 = -0.0385
+study                 drop from full  add to base
+variable                                         
+annual cycle                 -0.2068      +0.8098
+DO concentration             -0.0563      +0.7203
+daily cycle                  -0.0252      +0.0082
+log_width                    -0.0080      -0.0408
+Specific conductance         -0.0019      +0.0218
+Turbidity                    +0.0006      +0.0459
+local_slope                  +0.0023      +0.0004
+elevation_m                  +0.0041      +0.0433
+graph term                   +0.0046      +0.0971
+log_upa                      +0.0069      -0.0063
+pH                           +0.0145      +0.0008
+
+DO concentration   full R2 = 0.7859   base R2 = -0.0263
+study                 drop from full  add to base
+variable                                         
+pH                           -0.0938      +0.1653
+Water temperature            -0.0910      +0.7232
+daily cycle                  -0.0594      +0.0428
+annual cycle                 -0.0106      +0.5932
+elevation_m                  -0.0072      +0.0622
+graph term                   -0.0070      +0.0304
+Specific conductance         -0.0012      +0.1208
+log_upa                      +0.0082      +0.0766
+local_slope                  +0.0114      -0.0003
+Turbidity                    +0.0145      +0.0429
+log_width                    +0.0259      -0.0161
+
+Specific conductance   full R2 = 0.2352   base R2 = -0.1014
+study              drop from full  add to base
+variable                                      
+graph term                -0.4178      -0.0437
+annual cycle              -0.1511      +0.1462
+log_width                 -0.0222      -0.1245
+local_slope               -0.0085      -0.0047
+daily cycle               +0.0034      +0.0000
+log_upa                   +0.0037      -0.0363
+Turbidity                 +0.0039      -0.0035
+elevation_m               +0.0040      -0.0403
+pH                        +0.0142      -0.0048
+Water temperature         +0.0223      +0.0194
+DO concentration          +0.0462      +0.1177
+
+pH   full R2 = 0.2937   base R2 = -0.0508
+study                 drop from full  add to base
+variable                                         
+DO concentration             -0.1092      +0.1882
+graph term                   -0.0243      +0.0656
+annual cycle                 -0.0204      +0.0381
+elevation_m                  -0.0065      -0.0669
+Turbidity                    -0.0022      +0.0160
+daily cycle                  +0.0085      +0.0664
+Specific conductance         +0.0575      -0.0098
+Water temperature            +0.0590      -0.0041
+log_upa                      +0.0870      -0.0694
+local_slope                  +0.0958      -0.0025
+log_width                    +0.1122      +0.0087
+
+Turbidity   full R2 = -0.0609   base R2 = -0.0134
+study                 drop from full  add to base
+variable                                         
+log_upa                      -0.0863      -0.0440
+pH                           -0.0711      +0.0080
+annual cycle                 -0.0120      +0.0625
+Water temperature            -0.0042      +0.0405
+Specific conductance         +0.0009      -0.0038
+local_slope                  +0.0021      -0.0003
+daily cycle                  +0.0063      -0.0000
+graph term                   +0.0216      +0.0014
+log_width                    +0.0231      -0.0283
+elevation_m                  +0.0375      -0.0248
+DO concentration             +0.0453      +0.0363
+
+Saved results/ablation_all_chemistry/ablation_results.csv and ablation_tuning.csv (total 6s)
