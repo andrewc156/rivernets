@@ -10,10 +10,15 @@ series in data/usgs/usgs_28stations_metadata.csv, one file per water year:
 The current benchmark window is downloaded again with the rest; build_history.py
 keeps the current rows unchanged and only adds rows outside them.
 
-The USGS API key is optional and read from the environment (USGS_API_KEY);
-without it the public rate limit applies and the script waits when limited.
+The USGS API key comes from the environment (USGS_API_KEY) or, if that is not
+set, from the USGS_API_KEY line of USGS_Continuous_Water_Quality_Download.ipynb,
+so the key is kept in one place. With a key the API allows 1,000 requests per
+hour and 50,000 rows per request: the script asks for 50,000 rows per page and
+spaces its requests at least MIN_INTERVAL seconds apart (under 1,000 per hour).
 """
+import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -26,7 +31,23 @@ URL = "https://api.waterdata.usgs.gov/ogcapi/v1/collections/continuous/items"
 OUT = Path("data/usgs/history_raw")
 KEEP = ["time", "value", "approval_status", "last_modified"]
 VARIABLES = ["DO concentration", "Water temperature", "Specific conductance", "Turbidity", "pH"]
-PAGE_LIMIT = 50000
+PAGE_LIMIT = 50000            # rows per request allowed with a key
+MIN_INTERVAL = 3.7            # seconds between requests: at most ~973 per hour
+KEY_NOTEBOOK = "USGS_Continuous_Water_Quality_Download.ipynb"
+_last_request = [0.0]
+
+
+def api_key():
+    if os.environ.get("USGS_API_KEY"):
+        return os.environ["USGS_API_KEY"]
+    try:
+        for cell in json.load(open(KEY_NOTEBOOK))["cells"]:
+            m = re.search(r'USGS_API_KEY\s*=\s*"([^"]+)"', "".join(cell["source"]))
+            if m:
+                return m.group(1)
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def safe(variable):
@@ -35,6 +56,10 @@ def safe(variable):
 
 def get(session, url, params=None):
     for attempt in range(20):
+        wait = _last_request[0] + MIN_INTERVAL - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _last_request[0] = time.monotonic()
         try:
             r = session.get(url, params=params, timeout=180)
         except requests.RequestException as e:
@@ -66,7 +91,6 @@ def download(session, station, pcode, start, end):
         rows += [f.get("properties", {}) for f in payload.get("features", [])]
         url = next((l["href"] for l in payload.get("links", []) if l.get("rel") == "next"), None)
         params = None
-        time.sleep(0.1)
     df = pd.DataFrame(rows)
     return df.reindex(columns=KEEP)
 
@@ -81,10 +105,12 @@ def main():
     span = meta.groupby(["monitoring_location_id", "variable"]).agg(begin=("begin", "min"), end=("end", "max"))
 
     session = requests.Session()
-    if os.environ.get("USGS_API_KEY"):
-        session.headers["X-Api-Key"] = os.environ["USGS_API_KEY"]
+    key = api_key()
+    if key:
+        session.headers["X-Api-Key"] = key
+        print("using the USGS API key", flush=True)
     else:
-        print("USGS_API_KEY not set: using the public rate limit", flush=True)
+        print("no USGS API key found: using the public rate limit", flush=True)
 
     jobs = []
     for _, row in plan.iterrows():
