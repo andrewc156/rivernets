@@ -1140,7 +1140,7 @@ default model still reproduces Table~\ref{tab:final} exactly.
 \small
 \caption{Change in $R^2$ against the main graph model (Table~\ref{tab:final}), on the same rows and
 folds, with the station-bootstrap 95\% interval. $^\dagger$: a target the idea was meant to help.
-The varying-coefficient run finished only water temperature. The last row compares the hybrid with
+The last row compares the hybrid with
 gradient boosting of Table~\ref{tab:final}.}
 \label{tab:ideas}
 \resizebox{\textwidth}{!}{%
@@ -1151,7 +1151,7 @@ Idea & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
 Dams          & $-0.001^\dagger$ ($-0.002$, $0.000$) & $+0.014$ ($0.002$, $0.032$) & $0.000$ & $+0.006$ ($0.000$, $0.015$) & $+0.002^\dagger$ ($-0.001$, $0.002$) \\
 Tail-up       & $0.000$ ($-0.001$, $0.001$) & $-0.007$ ($-0.034$, $0.016$) & $-0.227^\dagger$ ($-0.380$, $0.000$) & $+0.004^\dagger$ ($0.000$, $0.016$) & $+0.011$ ($0.001$, $0.055$) \\
 REML          & $0.000^\dagger$ ($-0.001$, $0.000$) & $+0.015^\dagger$ ($-0.001$, $0.037$) & $-0.153^\dagger$ ($-0.510$, $-0.020$) & $-0.115^\dagger$ ($-0.208$, $-0.032$) & $-0.006^\dagger$ ($-0.044$, $0.000$) \\
-Varying       & $-0.022^\dagger$ ($-0.053$, $0.002$) & -- & -- & -- & -- \\
+Varying       & $-0.022^\dagger$ ($-0.053$, $0.001$) & $-0.015^\dagger$ ($-0.052$, $0.009$) & $-0.005$ ($-0.031$, $0.037$) & $-0.002$ ($-0.008$, $0.002$) & $+0.088^\dagger$ ($0.013$, $0.479$) \\
 Graph + GB    & $-0.018$ ($-0.048$, $0.006$) & $-0.009^\dagger$ ($-0.054$, $0.021$) & $-0.015$ ($-0.115$, $0.024$) & $+0.051$ ($-0.158$, $0.273$) & $+0.244^\dagger$ ($-0.024$, $0.341$) \\
 \midrule
 Graph + GB, $R^2$ & $0.845$ & $0.690$ & $0.369$ & $0.169$ & $0.349$ \\
@@ -1178,9 +1178,13 @@ Graph + GB, $R^2$ & $0.845$ & $0.690$ & $0.369$ & $0.169$ & $0.349$ \\
         where the inner LOO chose $10^{-4}$ in 16 of 19: the likelihood treats the station offsets
         as noise, while for predicting a new station they are the useful signal. Prediction-based
         selection is the right criterion here.
-  \item \textbf{Varying seasonal cycle} (water temperature only): chosen in 23 of 24 folds, yet
-        $-0.022$ (interval $-0.053$ to $0.002$). As with discharge, the inner loop chooses the extra
-        flexibility but the held-out station does not benefit.
+  \item \textbf{Varying seasonal cycle.} The inner loop chose the varying sets for water temperature
+        (23 of 24 folds), turbidity (17/17), specific conductance (24/24) and DO (14/17), but rarely
+        for pH (2/19). Of the three intended targets, water temperature ($-0.022$) and DO ($-0.015$)
+        get slightly worse. Turbidity gains $0.088$ (interval $0.013$ to $0.48$, 14 stations better,
+        3 worse), which fits the idea that the size and timing of the seasonal sediment peak differ
+        along the network. One station gives 69\% of the gain, however, and the hybrid below gains
+        far more. Specific conductance and pH are unchanged.
   \item \textbf{Graph + gradient boosting} is the only idea with a large effect. Turbidity rises from
         $0.104$ to $0.349$ (12 stations better, 5 worse), close to gradient boosting's $0.391$, but
         the interval ($-0.02$ to $0.34$) crosses zero and one station gives 64\% of the gain. The
@@ -1191,7 +1195,7 @@ Graph + GB, $R^2$ & $0.845$ & $0.690$ & $0.369$ & $0.169$ & $0.349$ \\
 \end{itemize}
 
 \paragraph{Decision.} None of the four changes to the graph model itself is adopted; all stay
-opt-in. Graph + gradient boosting is worth confirming as a single model for all five targets, since
+opt-in. The varying seasonal cycle is a candidate for turbidity only. Graph + gradient boosting is worth confirming as a single model for all five targets, since
 its turbidity gain is large but rests on 17 stations and partly on one of them.
 
 % =====================================================================
@@ -1253,7 +1257,8 @@ its turbidity gain is large but rests on 17 stations and partly on one of them.
         $-0.051$ before discharge is even used (Table~\ref{tab:qsubset}). Averaging the top three
         graph settings changes nothing beyond noise. Both options stay off by default.
   \item \textbf{Dams, flow-directed covariance, REML and a network-varying seasonal cycle do not
-        improve the graph model} (Section~\ref{sec:ideas}). REML is clearly worse for specific
+        improve the graph model} (Section~\ref{sec:ideas}), apart from a possible $+0.09$ for
+        turbidity with the varying seasonal cycle. REML is clearly worse for specific
         conductance and pH, because it treats the station offsets as noise. Only graph + gradient
         boosting changes a target materially: turbidity $0.104\to0.349$, close to gradient boosting
         ($0.391$), while keeping the graph model's lead for specific conductance and pH. The turbidity
@@ -1322,8 +1327,7 @@ come from graph-only runs at the same commit with \code{BENCHMARK\_GRAPH\_AVERAG
 and with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, saved in \code{results/avg3\_default/} and
 \code{results/avg3\_extended/}.
 Table~\ref{tab:ideas} comes from server runs at commit \code{4949dbe}, saved in
-\code{results/idea\_dams/}, \code{idea\_tailup/}, \code{idea\_reml/}, \code{idea\_varying/}
-(water temperature only) and \code{idea\_graph\_gb/}. The paired comparisons come from
+\code{results/idea\_dams/}, \code{idea\_tailup/}, \code{idea\_reml/}, \code{idea\_varying/} and \code{idea\_graph\_gb/}. The paired comparisons come from
 \code{compare\_runs.py} and are saved as \code{results/idea\_*\_vs\_*.csv}.
 
 \end{document}
