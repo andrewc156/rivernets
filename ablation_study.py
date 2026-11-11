@@ -36,8 +36,11 @@ Run from this folder:
     python ablation_study.py                      # all targets
     python ablation_study.py --targets pH --jobs 4
     python ablation_study.py --targets pH --max-outer-folds 2   # smoke test
+    python ablation_study.py --all-chemistry --jobs 4   # every other WQ variable as a
+                                                        # predictor, on the 14 stations
+                                                        # that measure all five
 
-Outputs (results/ablation/):
+Outputs (results/ablation/, or results/ablation_all_chemistry/ with --all-chemistry):
     ablation_results.csv      one row per (target, study, variable)
     ablation_tuning.csv       chosen settings per outer fold
 """
@@ -121,8 +124,18 @@ def load_laplacians():
     return laps, {int(n): i for i, n in enumerate(nodes)}
 
 
-def variables_for(target, K):
-    v = {c: [c] for c in TARGET_CHEMISTRY[target]}
+WQ_VARIABLES = list(TARGET_CHEMISTRY)
+
+
+def chemistry_for(target, all_chemistry):
+    """Fixed benchmark predictors, or every other WQ variable with --all-chemistry."""
+    if all_chemistry:
+        return [w for w in WQ_VARIABLES if w != target]
+    return TARGET_CHEMISTRY[target]
+
+
+def variables_for(target, K, all_chemistry=False):
+    v = {c: [c] for c in chemistry_for(target, all_chemistry)}
     v["daily cycle"] = [f"hour_{t}_{k}" for k in range(1, K + 1) for t in ("sin", "cos")]
     v["annual cycle"] = [f"doy_{t}_{k}" for k in range(1, K + 1) for t in ("sin", "cos")]
     v.update({s: [s] for s in STATIC})
@@ -300,9 +313,14 @@ def main():
     ap.add_argument("--targets", nargs="+", choices=list(TARGET_CHEMISTRY), default=list(TARGET_CHEMISTRY))
     ap.add_argument("--K", type=int, default=4, help="Fourier harmonics in the daily and annual cycles")
     ap.add_argument("--jobs", type=int, default=1, help="configurations run in parallel")
+    ap.add_argument("--all-chemistry", action="store_true",
+                    help="test every other WQ variable as a predictor. Rows are then limited to "
+                         "those where all five WQ variables are measured (14 stations), the same "
+                         "rows for every target. Results go to results/ablation_all_chemistry/")
     ap.add_argument("--max-outer-folds", type=int, default=None,
                     help="smoke test: only the first N outer folds (results not saved)")
     args = ap.parse_args()
+    out_dir = BASE_DIR / "results/ablation_all_chemistry" if args.all_chemistry else OUT_DIR
 
     t0 = time.time()
     lam_grid, beta_grid = load_settings()
@@ -312,9 +330,10 @@ def main():
 
     jobs = []
     for target in args.targets:
-        variables = variables_for(target, args.K)
+        variables = variables_for(target, args.K, args.all_chemistry)
         allf = [f for v, cols in variables.items() for f in cols]
-        df = data[["node", target, *allf]].dropna(subset=[target, *TARGET_CHEMISTRY[target]]).copy()
+        required = WQ_VARIABLES if args.all_chemistry else [target, *TARGET_CHEMISTRY[target]]
+        df = data[["node", *dict.fromkeys([target, *allf])]].dropna(subset=required).copy()
         full_stats = node_stats(df, target, allf)
         print(f"{target}: {df['node'].nunique()} stations, {len(df):,} rows, "
               f"variables: {list(variables)}")
@@ -376,10 +395,10 @@ def main():
     if args.max_outer_folds is not None:
         print("\n(--max-outer-folds was set: smoke test only, results not saved)")
         return
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    res.drop(columns="seconds").to_csv(OUT_DIR / "ablation_results.csv", index=False)
-    pd.DataFrame(tunings).to_csv(OUT_DIR / "ablation_tuning.csv", index=False)
-    print(f"\nSaved results/ablation/ablation_results.csv and ablation_tuning.csv "
+    out_dir.mkdir(parents=True, exist_ok=True)
+    res.drop(columns="seconds").to_csv(out_dir / "ablation_results.csv", index=False)
+    pd.DataFrame(tunings).to_csv(out_dir / "ablation_tuning.csv", index=False)
+    print(f"\nSaved {out_dir.relative_to(BASE_DIR)}/ablation_results.csv and ablation_tuning.csv "
           f"(total {time.time() - t0:.0f}s)")
 
 
