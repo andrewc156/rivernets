@@ -15,10 +15,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-LOO = [  # leave-one-station-out runs of Table 14 and Section 12
-    Path("results/benchmark_results_inner_fs"),
+LOO = [  # leave-one-station-out runs of Table 14 and Section 12; the first run
+    # holding a model wins (inner_fs also holds an older Graph-Laplacian)
     Path("results/benchmark_results_inner_fs_graph"),
     Path("results/idea_graph_gb"),
+    Path("results/benchmark_results_inner_fs"),
 ]
 SPLITS = ["station_repeated", "station_single", "time_within", "random_rows"]
 

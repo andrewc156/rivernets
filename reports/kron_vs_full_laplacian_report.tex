@@ -1199,6 +1199,160 @@ opt-in. The varying seasonal cycle is a candidate for turbidity only. Graph + gr
 its turbidity gain is large but rests on 17 stations and partly on one of them.
 
 % =====================================================================
+\section{Other evaluation splits}
+\label{sec:splits}
+
+Every result so far uses leave-one-station-out (LOO). Five other outer splits were run, all as
+opt-in options of the benchmark. In every one of them the hyperparameters and features are still
+chosen by inner leave-one-station-out on the training rows only. The splits answer different
+questions, so their $R^2$ values should be compared down a column, not across columns.
+\begin{enumerate}
+  \item \textbf{Held-out time period} (\code{BENCHMARK\_TIME\_SPLIT=2026-01-01}). The cutoff was fixed
+        in advance from the coverage of the records. A station is tested on its rows after the
+        cutoff, using a model trained on the other stations before the cutoff. Each station needs
+        at least 720 hours on its side of the cutoff. This leaves 16 test stations for water
+        temperature and specific conductance, 12 for DO, 11 for pH and 8 for turbidity. Most records
+        start in October 2025, so only 5--7 training stations cover each test month, and the test
+        is partly a seasonal extrapolation (autumn and early winter to the rest of the year).
+  \item \textbf{One 80/20 station split} (\code{station\_single}). 20\% of the stations, chosen at
+        random, are tested together. Unlike LOO, a test station's neighbours can be missing from
+        training as well. Only 3--5 test stations per target.
+  \item \textbf{Twenty 80/20 station splits} (\code{station\_repeated}, 20 random draws). This run
+        had not finished when this section was written.
+  \item \textbf{Last 20\% of each station} (\code{time\_within}). Every station is in training with
+        its first 80\% of rows and tested on the rest. The graph model then knows each test
+        station's own offset, which the conventional models, without a station identifier, cannot
+        use. This is short-term forecasting at monitored stations, not prediction at unmonitored
+        ones.
+  \item \textbf{Random 20\% of rows} (\code{random\_rows}). Neighbouring hours of the same station
+        fall on both sides, so this split leaks heavily. It is an upper bound only.
+\end{enumerate}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Held-out time period: paired comparisons on identical test rows (equal station
+weights, station bootstrap 95\% interval, predictions held fixed). ``Better'' counts the stations
+where the second model has the lower mean squared error. The last block gives the all-time LOO
+models (Table~\ref{tab:final}) on the same stations and post-cutoff rows, i.e.\ trained with the
+future in view.}
+\label{tab:timesplit}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l l l l l l}
+\toprule
+ & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+Test stations & 16 & 12 & 16 & 11 & 8 \\
+\midrule
+\multicolumn{6}{l}{\emph{$R^2$, time split}} \\
+Dummy                & $-0.057$ & $-0.029$ & $-0.096$ & $-0.051$ & $-3.17$ \\
+Ridge                & $0.749$  & $0.603$  & $-0.910$ & $-0.022$ & $-4.56$ \\
+Gradient boosting    & $0.760$  & $0.683$  & $-0.116$ & $-0.796$ & $-2.25$ \\
+Graph-Laplacian      & $0.774$  & $0.543$  & $0.089$  & $-0.136$ & $-5.22$ \\
+Graph + GB           & $0.729$  & $0.546$  & $0.059$  & $-0.471$ & $-6.51$ \\
+\midrule
+\multicolumn{6}{l}{\emph{Paired $\Delta R^2$ (interval; stations better/worse)}} \\
+Graph $-$ GB         & $+0.014$ ($-0.10$, $0.11$; 7/9) & $-0.140$ ($-0.35$, $-0.03$; 4/8) & $+0.205$ ($-0.29$, $0.56$; 10/6) & $+0.659$ ($0.28$, $1.32$; 9/2) & $-2.97$ ($-52.7$, $-0.42$; 2/6) \\
+Graph + GB $-$ graph & $-0.045$ ($-0.13$, $0.01$; 6/10) & $+0.004$ ($-0.04$, $0.04$; 6/6) & $-0.030$ ($-0.39$, $0.03$; 4/12) & $-0.334$ ($-0.76$, $-0.09$; 1/10) & $-1.29$ ($-17.9$, $0.02$; 1/7) \\
+\midrule
+\multicolumn{6}{l}{\emph{$R^2$ on the same rows, all-time LOO model}} \\
+Gradient boosting    & $0.797$ & $0.654$ & $-0.194$ & $-0.402$ & $-0.50$ \\
+Graph-Laplacian      & $0.858$ & $0.642$ & $0.229$  & $0.151$  & $-1.61$ \\
+Graph + GB           & $0.852$ & $0.626$ & $0.219$  & $0.020$  & $-1.36$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Held-out time period} (Table~\ref{tab:timesplit}).
+\begin{itemize}
+  \item \textbf{Not seeing the future costs the graph model most for pH and specific
+        conductance.} On the same rows its $R^2$ falls from $0.151$ to $-0.136$ (pH), from $0.229$
+        to $0.089$ (specific conductance), from $0.858$ to $0.774$ (water temperature) and from
+        $0.642$ to $0.543$ (DO). Gradient boosting loses less for water temperature, and for DO it
+        does slightly better than its all-time model.
+  \item \textbf{The graph model still beats gradient boosting for pH} ($+0.66$, interval
+        $0.28$ to $1.32$, 9 of 11 stations better), but it is no longer better than predicting the
+        training mean (Dummy $-0.051$, Ridge $-0.022$). In this setting no model predicts pH.
+  \item \textbf{For specific conductance} the graph model is still the only model above zero, but
+        the paired intervals cross zero.
+  \item \textbf{For DO, gradient boosting is clearly better} ($0.683$ vs $0.543$, interval excludes
+        zero), unlike LOO, where the two were within $0.033$.
+  \item \textbf{Graph + GB does not hold up.} It is never better than the graph model alone and
+        clearly worse for pH ($-0.33$, interval $-0.76$ to $-0.09$, 10 of 11 stations worse). The
+        boosted residual correction learned on the earlier months does not carry over to the later
+        ones.
+  \item \textbf{Turbidity cannot be assessed.} Every model, including the training mean, is far
+        below zero: the post-cutoff season has much lower variance and a different level than the
+        training months. With 8 test stations the paired differences can refute a model but not
+        confirm one. They point against both graph models.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{$R^2$ under the single-fold splits, next to LOO (Table~\ref{tab:final} and
+Table~\ref{tab:ideas}). Equal station weights. Test stations: LOO all; station split 5/3/5/4/3
+(water temperature/DO/specific conductance/pH/turbidity); the two time-based splits all stations.
+The best model in each column is in bold.}
+\label{tab:splits}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l rrrr rrrr rrrr}
+\toprule
+ & \multicolumn{4}{c}{Water temperature} & \multicolumn{4}{c}{DO} & \multicolumn{4}{c}{Specific conductance} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
+Model & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows \\
+\midrule
+Ridge              & $\mathbf{0.864}$ & $0.907$ & $0.729$ & $0.878$ & $0.701$ & $0.866$ & $0.693$ & $0.780$ & $-0.110$ & $-0.260$ & $-0.234$ & $0.072$ \\
+Spline GAM         & $0.838$ & $0.880$ & $0.735$ & $0.888$ & $0.708$ & $0.822$ & $0.705$ & $0.775$ & $0.022$ & $-0.344$ & $-0.079$ & $0.266$ \\
+Random forest      & $0.758$ & $0.593$ & $0.788$ & $\mathbf{0.995}$ & $0.685$ & $0.860$ & $0.727$ & $\mathbf{0.987}$ & $-0.174$ & $-0.989$ & $-0.147$ & $0.380$ \\
+Gradient boosting  & $0.833$ & $0.707$ & $\mathbf{0.889}$ & $0.979$ & $\mathbf{0.733}$ & $\mathbf{0.878}$ & $\mathbf{0.827}$ & $0.958$ & $-0.094$ & $-0.647$ & $-0.096$ & $0.398$ \\
+Graph-Laplacian    & $0.863$ & $\mathbf{0.907}$ & $0.728$ & $0.879$ & $0.700$ & $0.867$ & $0.728$ & $0.796$ & $\mathbf{0.385}$ & $-1.442$ & $\mathbf{0.734}$ & $0.774$ \\
+Graph + GB         & $0.845$ & $0.864$ & $0.735$ & $0.930$ & $0.690$ & $0.810$ & $0.711$ & $0.883$ & $0.369$ & $-1.546$ & $0.667$ & $\mathbf{0.781}$ \\
+Best other         & & & & & & & & & & OLS $\mathbf{-0.166}$ & & \\
+\midrule
+ & \multicolumn{4}{c}{pH} & \multicolumn{4}{c}{Turbidity} & & & & \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+Model & LOO & 80/20 & last 20\% & rows & LOO & 80/20 & last 20\% & rows & & & & \\
+\midrule
+Ridge              & $0.003$ & $-0.041$ & $-0.084$ & $0.096$ & $0.136$ & $0.114$ & $0.045$ & $0.089$ & & & & \\
+Spline GAM         & $0.012$ & $-0.032$ & $-0.060$ & $0.397$ & $0.091$ & $-0.042$ & $0.107$ & $0.236$ & & & & \\
+Random forest      & $-0.269$ & $-0.117$ & $-0.268$ & $0.747$ & $0.100$ & $-0.023$ & $\mathbf{0.303}$ & $0.441$ & & & & \\
+Gradient boosting  & $-0.171$ & $-0.068$ & $-0.078$ & $\mathbf{0.856}$ & $\mathbf{0.391}$ & $0.020$ & $0.239$ & $\mathbf{0.644}$ & & & & \\
+Graph-Laplacian    & $0.117$ & $0.079$ & $-0.193$ & $0.347$ & $0.104$ & $\mathbf{0.185}$ & $0.048$ & $0.108$ & & & & \\
+Graph + GB         & $\mathbf{0.169}$ & $\mathbf{0.139}$ & $-0.191$ & $0.619$ & $0.349$ & $0.101$ & $0.279$ & $0.442$ & & & & \\
+Best other         & & & EN $\mathbf{0.006}$ & & & & & & & & & \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Single-fold splits} (Table~\ref{tab:splits}). Each has one outer fold, so no intervals are
+given. The 80/20 station split has only 3--5 test stations.
+\begin{itemize}
+  \item \textbf{80/20 station split.} With whole groups of stations held out, the graph model ties
+        for best on water temperature, is $0.011$ behind gradient boosting for DO and is best for pH
+        (with the hybrid) and turbidity. Specific conductance collapses to $-1.44$, the worst of all
+        models. Two of the five test stations (96496279 and 203177183) account for this: the graph
+        model's mean squared error there is $2$--$4\times$ Ridge's, while at the other three it is
+        similar or much better. Whether this reflects missing neighbours or one unlucky draw is what
+        the 20-draw run (\code{station\_repeated}) is meant to show.
+  \item \textbf{Last 20\% of each station.} With each station's own history available, gradient
+        boosting is best for water temperature and DO, and random forest and the hybrid for
+        turbidity. The graph model's specific conductance $R^2$ jumps to $0.73$ because it knows
+        each station's offset, which is most of the specific conductance signal. No model predicts
+        the last 20\% of pH (best $0.006$).
+  \item \textbf{Random rows} is leaky, as expected: random forest and gradient boosting reach
+        $0.96$--$0.99$ for water temperature and DO and $0.86$ for pH, because they interpolate
+        between neighbouring hours of the same station. These values say nothing about prediction at
+        new stations or new times.
+\end{itemize}
+
+\paragraph{Summary.} The graph model's main advantage (specific conductance and pH at unmonitored
+stations) holds under the held-out time period against gradient boosting, but there it no longer
+beats the training mean for pH. For specific conductance it holds under LOO and the within-station
+time split, but not in the single 80/20 draw. The Graph + GB hybrid, promising under LOO
+(Section~\ref{sec:ideas}), does not carry over to a new time period and should not be adopted on
+the current evidence.
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -1263,6 +1417,13 @@ its turbidity gain is large but rests on 17 stations and partly on one of them.
         boosting changes a target materially: turbidity $0.104\to0.349$, close to gradient boosting
         ($0.391$), while keeping the graph model's lead for specific conductance and pH. The turbidity
         interval still crosses zero, so this hybrid should be confirmed before it is adopted.
+  \item \textbf{Under other splits the picture is mixed} (Section~\ref{sec:splits}). On a held-out
+        time period the graph model still beats gradient boosting for pH ($+0.66$, interval excludes
+        zero) and is the only model above zero for specific conductance, but no model beats the
+        training mean for pH, and gradient boosting is clearly better for DO. The Graph + GB hybrid
+        is no better than the graph model alone on the held-out period and clearly worse for pH,
+        so it is not adopted. A single 80/20 station split drops specific conductance below zero
+        because of two of its five test stations; the 20-draw version is still running.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 14--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -1329,5 +1490,15 @@ and with \code{BENCHMARK\_GRAPH\_EXTENDED=1}, saved in \code{results/avg3\_defau
 Table~\ref{tab:ideas} comes from server runs at commit \code{4949dbe}, saved in
 \code{results/idea\_dams/}, \code{idea\_tailup/}, \code{idea\_reml/}, \code{idea\_varying/} and \code{idea\_graph\_gb/}. The paired comparisons come from
 \code{compare\_runs.py} and are saved as \code{results/idea\_*\_vs\_*.csv}.
+Table~\ref{tab:timesplit} comes from a server run at commit \code{220357a} with
+\code{BENCHMARK\_TIME\_SPLIT=2026-01-01} and
+\code{BENCHMARK\_MODELS=Dummy,Ridge,Graph-Laplacian,Graph-Laplacian + GB,Gradient Boosting}, saved in
+\code{results/benchmark\_results\_time\_split/}; the paired comparisons and the all-time reference
+come from \code{time\_split\_analysis.py} and are saved in the same folder as
+\code{time\_split\_paired.csv} and \code{time\_split\_reference.csv}. Table~\ref{tab:splits} comes
+from server runs at commit \code{8e1d542} with \code{BENCHMARK\_SPLIT=station\_single},
+\code{time\_within} or \code{random\_rows} (nine models), saved in
+\code{results/benchmark\_results\_split\_*/}, and from \code{split\_analysis.py}, saved in
+\code{results/split\_comparison.csv}.
 
 \end{document}
