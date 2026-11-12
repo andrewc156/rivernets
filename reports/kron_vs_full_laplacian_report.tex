@@ -1202,7 +1202,7 @@ its turbidity gain is large but rests on 17 stations and partly on one of them.
 \section{Other evaluation splits}
 \label{sec:splits}
 
-Every result so far uses leave-one-station-out (LOO). Five other outer splits were run, all as
+Every result so far uses leave-one-station-out (LOO). Six other outer splits were run, all as
 opt-in options of the benchmark. In every one of them the hyperparameters and features are still
 chosen by inner leave-one-station-out on the training rows only. The splits answer different
 questions, so their $R^2$ values should be compared down a column, not across columns.
@@ -1217,8 +1217,16 @@ questions, so their $R^2$ values should be compared down a column, not across co
   \item \textbf{One 80/20 station split} (\code{station\_single}). 20\% of the stations, chosen at
         random, are tested together. Unlike LOO, a test station's neighbours can be missing from
         training as well. Only 3--5 test stations per target.
-  \item \textbf{Twenty 80/20 station splits} (\code{station\_repeated}, 20 random draws). This run
-        had not finished when this section was written.
+  \item \textbf{Twenty 80/20 station splits} (\code{station\_repeated}). Twenty random draws of
+        3--5 test stations each. The pooled $R^2$ is over all draws: a station tested in several
+        draws counts once, with all its test rows. Twenty draws do not reach every station, so 16--24
+        stations are tested per target instead of 17--24.
+  \item \textbf{Leave one subbasin out} (\code{subbasin}). The stations are grouped by station-number
+        prefix into five subbasins, fixed before the run: Colorado headwaters (0907--0910), Gunnison
+        and Colorado--Dolores (0911--0919), Green (0920--0933), San Juan (0934--0937), and Lower
+        Colorado and Verde (0938--0951). Each subbasin is tested with all its stations held out
+        together, so no test station has a training neighbour in its own subbasin. The subbasins
+        hold 1--7 stations per target.
   \item \textbf{Last 20\% of each station} (\code{time\_within}). Every station is in training with
         its first 80\% of rows and tested on the rest. The graph model then knows each test
         station's own offset, which the conventional models, without a station identifier, cannot
@@ -1379,8 +1387,7 @@ given. The 80/20 station split has only 3--5 test stations.
         (with the hybrid) and turbidity. Specific conductance collapses to $-1.44$, the worst of all
         models. Two of the five test stations (96496279 and 203177183) account for this: the graph
         model's mean squared error there is $2$--$4\times$ Ridge's, while at the other three it is
-        similar or much better. Whether this reflects missing neighbours or one unlucky draw is what
-        the 20-draw run (\code{station\_repeated}) is meant to show.
+        similar or much better. The 20-draw run below shows that this was largely an unlucky draw.
   \item \textbf{Last 20\% of each station.} With each station's own history available, gradient
         boosting is best for water temperature and DO, and random forest and the hybrid for
         turbidity. The graph model's specific conductance $R^2$ jumps to $0.73$ because it knows
@@ -1392,12 +1399,283 @@ given. The 80/20 station split has only 3--5 test stations.
         new stations or new times.
 \end{itemize}
 
+\begin{table}[h]
+\centering
+\small
+\caption{Twenty random 80/20 station splits (\code{station\_repeated}). Upper block: pooled $R^2$
+over all draws (equal station weights). Lower block: mean\,$\pm$\,standard deviation of the
+per-draw $R^2$ (3--5 test stations per draw). Best pooled value in bold. The Spline GAM pH value is
+dominated by one draw ($R^2=-8{,}881$), in which its splines extrapolate on an out-of-range station.}
+\label{tab:split_repeated}
+\begin{tabular}{l rrrrr}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Test stations & 24 & 16 & 24 & 18 & 16 \\ \midrule
+Dummy               & $-0.030$ & $-0.027$ & $-0.075$ & $-0.039$ & $-0.030$ \\
+OLS                 & $0.859$ & $0.683$ & $-0.113$ & $-0.009$ & $0.144$ \\
+Ridge               & $\mathbf{0.861}$ & $0.688$ & $-0.167$ & $0.001$ & $0.140$ \\
+Elastic Net         & $0.859$ & $0.702$ & $-0.164$ & $0.010$ & $0.141$ \\
+Spline GAM          & $0.805$ & $0.701$ & $-0.060$ & $-513$ & $0.080$ \\
+Random forest       & $0.745$ & $0.732$ & $-0.499$ & $-0.299$ & $0.121$ \\
+Gradient boosting   & $0.826$ & $\mathbf{0.746}$ & $-0.161$ & $-0.102$ & $0.364$ \\
+Graph-Laplacian     & $0.859$ & $0.702$ & $\mathbf{0.258}$ & $0.047$ & $0.181$ \\
+Graph + GB          & $0.834$ & $0.693$ & $0.239$ & $\mathbf{0.054}$ & $\mathbf{0.421}$ \\
+\midrule
+\multicolumn{6}{l}{\emph{Per-draw $R^2$, mean\,$\pm$\,s.d.\ over 20 draws}} \\
+Ridge               & $0.86\pm0.06$ & $0.68\pm0.23$ & $-0.47\pm0.90$ & $-0.05\pm0.18$ & $-0.45\pm1.67$ \\
+Gradient boosting   & $0.84\pm0.13$ & $0.74\pm0.20$ & $-0.68\pm1.01$ & $-0.26\pm0.36$ & $-0.12\pm1.16$ \\
+Graph-Laplacian     & $0.86\pm0.06$ & $0.71\pm0.20$ & $-0.02\pm0.75$ & $0.00\pm0.19$ & $-0.24\pm1.16$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Twenty 80/20 station splits} (Table~\ref{tab:split_repeated}; LOO in
+Tables~\ref{tab:final} and~\ref{tab:ideas}).
+\begin{itemize}
+  \item \textbf{The LOO ranking survives.} Water temperature and DO are within about $0.01$ of LOO
+        for every linear and graph model. The graph model is still the only model clearly above zero
+        for specific conductance ($0.258$; every non-graph model is below zero) and is best, with the
+        hybrid, for pH.
+  \item \textbf{The graph model loses most for specific conductance} ($0.385\to0.258$). This fits
+        its reliance on nearby stations: a draw that removes three stations often removes a test
+        station's neighbours too. The subbasin split below tests this directly.
+  \item \textbf{Single draws are very noisy.} The graph model's specific conductance $R^2$ ranges
+        from $-1.95$ to $0.76$ across draws (s.d.\ $0.75$). The single 80/20 split
+        (Table~\ref{tab:split_single}, $-1.44$) was at the bad end of this range, so a single 80/20
+        split should not be used to compare models here.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Leave one subbasin out: pooled $R^2$ over all stations (equal station weights). Best in
+bold.}
+\label{tab:split_subbasin}
+\begin{tabular}{l rrrrr}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Test stations & 24 & 17 & 24 & 19 & 17 \\ \midrule
+Dummy               & $-0.030$ & $-0.026$ & $\mathbf{-0.135}$ & $-0.048$ & $-0.104$ \\
+OLS                 & $\mathbf{0.852}$ & $0.615$ & $-1.440$ & $-0.024$ & $0.003$ \\
+Ridge               & $0.851$ & $0.624$ & $-1.179$ & $\mathbf{-0.011}$ & $-0.003$ \\
+Elastic Net         & $0.850$ & $0.643$ & $-1.159$ & $-0.020$ & $-0.022$ \\
+Spline GAM          & $0.760$ & $0.654$ & $-0.293$ & $-0.143$ & $-0.028$ \\
+Random forest       & $0.699$ & $0.675$ & $-0.269$ & $-0.487$ & $0.122$ \\
+Gradient boosting   & $0.763$ & $\mathbf{0.709}$ & $-0.144$ & $-0.392$ & $0.028$ \\
+Graph-Laplacian     & $0.851$ & $0.623$ & $-0.241$ & $-0.119$ & $0.015$ \\
+Graph + GB          & $0.837$ & $0.617$ & $-0.244$ & $-0.170$ & $\mathbf{0.171}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{$R^2$ within each subbasin, under LOO (only the station itself held out, so the rest of
+its subbasin is in training) and with the whole subbasin held out. Both are computed over the same
+stations and rows, with equal station weights. Within one subbasin $R^2$ is measured against that
+subbasin's own mean, so it is lower than the pooled values.}
+\label{tab:subbasin_loo}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l r rr rr rr}
+\toprule
+ & & \multicolumn{2}{c}{Ridge} & \multicolumn{2}{c}{Gradient boosting} & \multicolumn{2}{c}{Graph-Laplacian} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Subbasin & Stations & LOO & Subbasin out & LOO & Subbasin out & LOO & Subbasin out \\
+\midrule
+\multicolumn{8}{l}{\emph{Specific conductance}} \\
+Colorado headwaters & 7 & $-0.17$ & $-0.25$ & $-0.19$ & $-0.14$ & $0.52$ & $-0.05$ \\
+Green & 6 & $-0.88$ & $-1.34$ & $-1.98$ & $-2.54$ & $0.37$ & $-5.14$ \\
+Gunnison + Colorado-Dolores & 5 & $-0.30$ & $-0.38$ & $-0.23$ & $-0.27$ & $0.11$ & $-0.20$ \\
+Lower Colorado + Verde & 3 & $-1.03$ & $-23.2$ & $-0.72$ & $-0.58$ & $-0.52$ & $0.15$ \\
+San Juan & 3 & $-6.99$ & $-10.0$ & $-5.14$ & $-6.41$ & $-0.79$ & $-9.79$ \\
+\midrule
+\multicolumn{8}{l}{\emph{pH}} \\
+Colorado headwaters & 6 & $-0.00$ & $0.02$ & $-0.07$ & $-0.21$ & $0.16$ & $-0.22$ \\
+Green & 2 & $-0.57$ & $-0.66$ & $-1.18$ & $-1.37$ & $-0.06$ & $-0.79$ \\
+Gunnison + Colorado-Dolores & 4 & $-0.08$ & $-0.25$ & $-0.08$ & $-0.35$ & $0.15$ & $0.12$ \\
+Lower Colorado + Verde & 3 & $-0.40$ & $-0.40$ & $-2.70$ & $-2.25$ & $-0.27$ & $-0.13$ \\
+San Juan & 4 & $-0.05$ & $-0.02$ & $0.30$ & $-0.29$ & $-0.08$ & $-0.38$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Leave one subbasin out} (Tables~\ref{tab:split_subbasin} and~\ref{tab:subbasin_loo}).
+\begin{itemize}
+  \item \textbf{Water temperature transfers between subbasins.} The linear and graph models lose
+        only about $0.01$ against LOO ($0.863\to0.851$). Water temperature follows climate and the
+        annual cycle, which the subbasins share. DO loses about $0.08$, and gradient boosting is
+        best ($0.709$).
+  \item \textbf{The graph model's specific conductance advantage does not transfer.} Its pooled
+        $R^2$ falls from $0.385$ (LOO) to $-0.241$, below the training mean ($-0.135$).
+        Table~\ref{tab:subbasin_loo} shows where the LOO skill comes from. Under LOO the graph model
+        is positive within three subbasins (headwaters $0.52$, Green $0.37$, Gunnison $0.11$),
+        while Ridge and gradient boosting are negative in every subbasin. With the subbasin held out
+        the graph model drops in four of five, most in the Green ($0.37\to-5.14$) and San Juan
+        ($-0.79\to-9.79$). Ridge and gradient boosting change much less, because they never used
+        the other stations of the subbasin. The graph model's specific conductance skill is
+        therefore interpolation from stations in the same subbasin. It does not carry a salinity
+        level into a subbasin with no training station.
+  \item \textbf{pH behaves the same way, on a smaller scale.} Under LOO the graph model is the best
+        of the three models within four of five subbasins. With the subbasin held out it drops in
+        four of five, and no model is above zero in the pooled $R^2$ (best Ridge, $-0.011$).
+  \item \textbf{The graph model degrades less than the linear models} for specific conductance
+        ($-0.24$ vs $-1.2$ to $-1.4$; Ridge reaches $-23$ in the Lower Colorado), so its
+        smoothing still guards against extreme errors.
+  \item \textbf{Turbidity:} only the hybrid ($0.171$) and random forest ($0.122$) stay clearly
+        above zero.
+  \item Two subbasins hold a single station for some targets (San Juan for DO, Lower Colorado for
+        turbidity). There the two splits are identical. The turbidity $R^2$ at that one station is
+        below $-10^4$ for every model, because its series is nearly constant, so it is left out of
+        Table~\ref{tab:subbasin_loo} and of this discussion.
+\end{itemize}
+
 \paragraph{Summary.} The graph model's main advantage (specific conductance and pH at unmonitored
 stations) holds under the held-out time period against gradient boosting, but there it no longer
-beats the training mean for pH. For specific conductance it holds under LOO and the within-station
-time split, but not in the single 80/20 draw. The Graph + GB hybrid, promising under LOO
-(Section~\ref{sec:ideas}), does not carry over to a new time period and should not be adopted on
-the current evidence.
+beats the training mean for pH. It survives twenty 80/20 station draws, at a lower level for
+specific conductance ($0.258$); the single 80/20 draw was an unlucky one. It does not survive leave
+one subbasin out: the specific conductance skill is interpolation between stations of the same
+subbasin, so the model should be used where its subbasin has monitored stations, and not to
+predict a basin with no stations. Water temperature transfers well under every split. The Graph +
+GB hybrid, promising under LOO (Section~\ref{sec:ideas}), does not carry over to a new time period
+and should not be adopted on the current evidence.
+
+% =====================================================================
+\section{Upstream-watershed and neighbour-reading features}
+\label{sec:features}
+
+Two further predictors were added as opt-in options and tested under LOO with the five fast models
+(Dummy, OLS, Ridge, Elastic Net, Spline GAM) and the graph model. Each is offered to the inner loop
+as an extra candidate, so it is used only where the inner loop chooses it. The comparisons are paired
+against the runs of Table~\ref{tab:final} on identical rows (\code{compare\_runs.py}), with the
+station-bootstrap interval of Table~\ref{tab:qeffect}.
+\begin{enumerate}
+  \item \textbf{Upstream-watershed attributes} (\code{BENCHMARK\_FS\_STATIC=...,upstream}). A fourth
+        static candidate: local slope plus three EPA StreamCat metrics accumulated over each
+        station's whole upstream watershed, chosen in advance for specific conductance: mean
+        lithological sulfur (gypsum and evaporites), mean lithological calcium oxide (carbonates)
+        and row-crop land in 2019 (irrigation return flow). Stations are matched to their NHDPlus
+        reach through the USGS NLDI. One station (09217000), whose reach has no StreamCat values,
+        uses the first reach downstream.
+  \item \textbf{Neighbour reading} (\code{BENCHMARK\_NEIGHBOUR=on}). The mean anomaly ($z$-score
+        against each station's own training mean and standard deviation) of the target at the same
+        hour at the three nearest training stations, nearest by effective resistance on the
+        distance-weighted Kron Laplacian; $0$ when none of them reports. At least 89\% of rows have
+        a concurrent neighbour. Every feature candidate is offered with and without it. The
+        held-out station's own data never enters its feature. The inner loop reuses the features
+        of the outer fold, so its choice is mildly optimistic.
+\end{enumerate}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Upstream-watershed attributes: paired $\Delta R^2$ against the same model without them
+(LOO, identical rows), with the station-bootstrap 95\% interval. Better/worse counts stations with
+lower/higher mean squared error. Water temperature and turbidity are unchanged for every model
+(the set was never chosen). Intervals that exclude zero are in bold.}
+\label{tab:upstream}
+\begin{tabular}{ll rrrcc}
+\toprule
+Target & Model & Without & With & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $0.366$ & $-0.019$ & ($-0.12$, $0.03$) & 9/11 \\
+              & OLS             & $-0.099$ & $-0.220$ & $-0.121$ & ($-0.20$, $0.00$) & 0/1 \\
+              & Ridge           & $-0.110$ & $-0.217$ & $-0.107$ & ($-0.28$, $0.00$) & 0/2 \\
+              & Elastic Net     & $-0.109$ & $-0.207$ & $-0.098$ & ($-0.33$, $0.00$) & 0/2 \\
+              & Spline GAM      & $0.022$ & $-0.004$ & $-0.026$ & ($-0.04$, $0.00$) & 0/1 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $0.697$ & $-0.002$ & ($-0.02$, $0.02$) & 2/2 \\
+              & OLS             & $0.695$ & $0.692$ & $-0.003$ & ($-0.03$, $0.02$) & 1/1 \\
+              & Ridge           & $0.701$ & $0.695$ & $-0.006$ & ($-0.03$, $0.02$) & 1/2 \\
+              & Elastic Net     & $0.705$ & $0.687$ & $-0.018$ & ($-0.04$, $0.00$) & 4/11 \\
+              & Spline GAM      & $0.708$ & $0.688$ & $\mathbf{-0.020}$ & ($-0.05$, $-0.00$) & 0/3 \\
+\addlinespace
+pH            & Spline GAM      & $0.012$ & $-0.050$ & $-0.061$ & ($-0.19$, $0.00$) & 0/1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Neighbour reading: paired $\Delta R^2$ against the same model without it (LOO, identical
+rows), with the station-bootstrap 95\% interval. Better/worse as in Table~\ref{tab:upstream}.
+Intervals that exclude zero are in bold.}
+\label{tab:neighbour}
+\begin{tabular}{ll rrrcc}
+\toprule
+Target & Model & Without & With & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.863$ & $0.874$ & $+0.010$ & ($-0.01$, $0.03$) & 18/6 \\
+              & OLS             & $0.863$ & $0.875$ & $+0.011$ & ($-0.01$, $0.03$) & 19/5 \\
+              & Ridge           & $0.864$ & $0.875$ & $+0.011$ & ($-0.01$, $0.03$) & 19/5 \\
+              & Elastic Net     & $0.863$ & $0.875$ & $+0.011$ & ($-0.01$, $0.03$) & 19/5 \\
+              & Spline GAM      & $0.838$ & $0.843$ & $+0.004$ & ($-0.02$, $0.03$) & 13/5 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $0.712$ & $+0.012$ & ($-0.01$, $0.05$) & 12/5 \\
+              & OLS             & $0.695$ & $0.701$ & $+0.006$ & ($-0.02$, $0.02$) & 14/3 \\
+              & Ridge           & $0.701$ & $0.705$ & $+0.004$ & ($-0.02$, $0.03$) & 14/3 \\
+              & Elastic Net     & $0.705$ & $0.721$ & $+0.016$ & ($-0.00$, $0.04$) & 13/4 \\
+              & Spline GAM      & $0.708$ & $0.699$ & $-0.009$ & ($-0.02$, $0.00$) & 0/2 \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $0.392$ & $+0.007$ & ($-0.03$, $0.06$) & 14/10 \\
+              & OLS             & $-0.099$ & $-0.040$ & $\mathbf{+0.059}$ & ($0.02$, $0.20$) & 21/3 \\
+              & Ridge           & $-0.110$ & $-0.060$ & $\mathbf{+0.049}$ & ($0.01$, $0.17$) & 21/3 \\
+              & Elastic Net     & $-0.109$ & $-0.060$ & $\mathbf{+0.049}$ & ($0.02$, $0.16$) & 21/3 \\
+              & Spline GAM      & $0.022$ & $0.020$ & $-0.002$ & ($-0.01$, $0.00$) & 0/1 \\
+\addlinespace
+pH            & Graph-Laplacian & $0.117$ & $0.178$ & $+0.061$ & ($-0.16$, $0.18$) & 17/2 \\
+              & OLS             & $-0.014$ & $0.130$ & $\mathbf{+0.143}$ & ($0.06$, $0.22$) & 15/4 \\
+              & Ridge           & $0.003$ & $0.121$ & $\mathbf{+0.118}$ & ($0.06$, $0.18$) & 14/5 \\
+              & Elastic Net     & $0.023$ & $0.143$ & $\mathbf{+0.121}$ & ($0.04$, $0.19$) & 14/5 \\
+              & Spline GAM      & $0.012$ & $0.153$ & $\mathbf{+0.141}$ & ($0.05$, $0.23$) & 13/6 \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.104$ & $0.088$ & $-0.016$ & ($-0.14$, $0.03$) & 8/7 \\
+              & OLS             & $0.136$ & $0.125$ & $-0.011$ & ($-0.08$, $0.00$) & 2/8 \\
+              & Ridge           & $0.136$ & $0.126$ & $-0.010$ & ($-0.08$, $0.00$) & 3/8 \\
+              & Elastic Net     & $0.136$ & $0.126$ & $-0.010$ & ($-0.08$, $0.00$) & 3/8 \\
+              & Spline GAM      & $0.091$ & $0.062$ & $-0.029$ & ($-0.06$, $0.06$) & 10/7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Upstream-watershed attributes} (Table~\ref{tab:upstream}).
+\begin{itemize}
+  \item \textbf{No gain for any model or target.} For specific conductance, the target they were
+        chosen for, the graph model selected them in 20 of 24 outer folds, yet its $R^2$ fell
+        slightly ($-0.019$, interval $-0.12$ to $0.03$, 9 stations better and 11 worse). The linear
+        models fell by $0.10$--$0.12$ in the few folds where they chose them.
+  \item For the graph model, neighbouring stations on the network share most of their upstream
+        geology, so the Laplacian smoothing probably already carries what these attributes add.
+        For the linear models, three more station-level predictors over about 24 stations add
+        another way to overfit.
+  \item The attributes were chosen before any run, so this is a fair negative result. The option
+        stays off by default.
+\end{itemize}
+
+\paragraph{Neighbour reading} (Table~\ref{tab:neighbour}).
+\begin{itemize}
+  \item \textbf{It clearly helps pH.} Every conventional model gains $0.12$--$0.14$ with intervals
+        above zero, which brings them from about $0$ to $0.12$--$0.15$, level with the graph
+        model without it. The graph model rises to $0.178$, the best LOO pH value so far, with 17
+        of 19 stations better. Its interval crosses zero because one or two stations swing a lot.
+  \item \textbf{Specific conductance:} the linear models gain about $0.05$ (21 of 24 stations
+        better) but stay below zero. The graph model barely changes ($+0.007$): its smoothing
+        already uses the information that nearby stations carry.
+  \item \textbf{Water temperature and DO:} consistent small gains of about $0.01$ for most
+        models, with intervals crossing zero.
+  \item \textbf{Turbidity:} a small loss for every model, consistent with the weak correlation
+        between a station's turbidity anomaly and its neighbours' (median $0.28$, against $0.96$ for
+        water temperature).
+  \item The inner loop chose it in every fold for every linear model and the graph model for water
+        temperature, DO, specific conductance and pH.
+  \item \textbf{It answers a different question.} The feature needs live readings from neighbouring
+        stations at the same hour, so these results apply to filling in an unmonitored site while
+        its neighbours report, not to prediction from map features alone. Both tasks are useful,
+        but values with and without it should be reported separately. It stays off by default.
+\end{itemize}
 
 % =====================================================================
 \section{Conclusions}
@@ -1469,8 +1747,25 @@ the current evidence.
         zero) and is the only model above zero for specific conductance, but no model beats the
         training mean for pH, and gradient boosting is clearly better for DO. The Graph + GB hybrid
         is no better than the graph model alone on the held-out period and clearly worse for pH,
-        so it is not adopted. A single 80/20 station split drops specific conductance below zero
-        because of two of its five test stations; the 20-draw version is still running.
+        so it is not adopted. Over twenty 80/20 station draws the LOO ranking holds, with the graph
+        model's specific conductance lower ($0.258$); the single 80/20 draw ($-1.44$) was an unlucky
+        one.
+  \item \textbf{The graph model interpolates within subbasins; it does not extrapolate to new
+        ones.} With a whole subbasin held out, its specific conductance $R^2$ falls from $0.385$ to
+        $-0.241$, below the training mean. Under LOO it is positive within three subbasins while
+        Ridge and gradient boosting are negative in all five (Table~\ref{tab:subbasin_loo}), so its
+        skill comes from other stations of the same subbasin. Water temperature transfers between
+        subbasins with almost no loss. Claims about the graph model should be limited to sites in
+        subbasins that already have monitored stations.
+  \item \textbf{Upstream-watershed geology and crop land do not help} (Table~\ref{tab:upstream}),
+        although the inner loop chose them for the graph model in 20 of 24 specific conductance
+        folds. The network smoothing already carries most of that information.
+  \item \textbf{Concurrent readings at neighbouring stations clearly help pH}
+        (Table~\ref{tab:neighbour}): $+0.12$ to $+0.14$ for every conventional model, with intervals
+        above zero, and $0.117\to0.178$ for the graph model, the best LOO pH so far. They add about
+        $0.05$ to the linear models for specific conductance and nothing to the graph model. This
+        is a different task (live neighbours required), so it should be reported separately from
+        prediction from map features alone.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 14--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -1493,7 +1788,11 @@ The main ablation uses only each target's fixed chemistry predictors. The all-ch
 overfit, and its $R^2$ values are not comparable with the benchmark. The discharge runs are a
 different task (flow-gauged stations only, 14--20 stations), so their $R^2$ values are not
 comparable with Table~\ref{tab:final}, and their gradient boosting and random forest runs had not
-finished when this section was written.
+finished when this section was written. The neighbour-reading and upstream runs cover only the
+five fast models and the graph model. Gradient boosting with the neighbour reading and the
+longer-history run had not finished
+when this section was written. In the neighbour run the inner loop reuses the outer fold's
+neighbour features, so its choices are mildly optimistic.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
 and are saved in \code{results/laplacian\_fixed/}. The standalone check script is
@@ -1546,6 +1845,20 @@ come from \code{time\_split\_analysis.py} and are saved in the same folder as
 from server runs at commit \code{8e1d542} with \code{BENCHMARK\_SPLIT=station\_single},
 \code{time\_within} or \code{random\_rows} (nine models), saved in
 \code{results/benchmark\_results\_split\_*/}, and from \code{split\_analysis.py}, saved in
-\code{results/split\_comparison.csv}.
+\code{results/split\_comparison.csv}. Table~\ref{tab:split_repeated} comes from a server run at the
+same commit with \code{BENCHMARK\_SPLIT=station\_repeated}, saved in
+\code{results/benchmark\_results\_split\_station\_repeated/}; the per-draw statistics are in
+\code{results/split\_repeated\_draws.csv}. Tables~\ref{tab:split_subbasin}--\ref{tab:neighbour}
+come from server runs at commit \code{bf33e18}: \code{BENCHMARK\_SPLIT=subbasin} (nine models),
+\code{BENCHMARK\_FS\_STATIC=none,local\_slope,reduced,upstream} and \code{BENCHMARK\_NEIGHBOUR=on}
+(both with \code{BENCHMARK\_MODELS=Dummy,OLS,Ridge,Elastic Net,Spline GAM,Graph-Laplacian}), saved
+in \code{results/benchmark\_results\_split\_subbasin/}, \code{results/benchmark\_results\_upstream/}
+and \code{results/benchmark\_results\_neighbour/}. The per-subbasin values, with the LOO $R^2$ over
+the same stations, are in \code{results/split\_subbasin\_folds.csv} (\code{split\_analysis.py}). The
+upstream attributes come from \code{fetch\_upstream\_attributes.py} (public NLDI and StreamCat
+APIs, about a minute), saved in \code{data/benchmark\_data/upstream\_attributes.csv}. The paired
+comparisons come from \code{compare\_runs.py} against \code{results/benchmark\_results\_inner\_fs\_graph/}
+(graph model) and \code{results/benchmark\_results\_inner\_fs/} (other models), saved as
+\code{results/upstream\_vs\_base\_*.csv} and \code{results/neighbour\_vs\_base\_*.csv}.
 
 \end{document}

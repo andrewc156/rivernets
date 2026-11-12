@@ -1,7 +1,8 @@
 """R2 of every model under each outer split scheme (BENCHMARK_SPLIT runs),
 next to the leave-one-station-out benchmark.
 For the leave-one-subbasin-out split the R2 of every held-out subbasin is
-also written (results/split_subbasin_folds.csv).
+also written (results/split_subbasin_folds.csv), next to the LOO R2 over the
+same stations (R2_loo: each station predicted with only itself held out).
 
 usage: python split_analysis.py
 
@@ -68,10 +69,14 @@ def main():
                               "R2_mean": np.mean(per), "R2_sd": np.std(per, ddof=1),
                               "R2_min": np.min(per), "R2_max": np.max(per)})
             if split == "subbasin":
+                loo = runs["loo"]
+                loo = loo[(loo["target"] == target) & (loo["model"] == model)]
                 for fold, d in g.groupby("fold"):
+                    same = loo[loo["node"].isin(d["node"].unique())]
                     basins.append({"target": target, "model": model,
                                    "fold": subbasin_of[str(int(d["node"].iloc[0]))],
-                                   "stations": d["node"].nunique(), "R2": r2_equal(d)})
+                                   "stations": d["node"].nunique(), "R2": r2_equal(d),
+                                   "R2_loo": r2_equal(same) if len(same) else np.nan})
 
     table = pd.DataFrame(rows)
     wide = table.pivot_table(index=["target", "model"], columns="split", values="R2")
