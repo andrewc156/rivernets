@@ -31,6 +31,8 @@ analysis, with every table and caveat, is in \texttt{kron\_vs\_full\_laplacian\_
   \item Most model extensions did not help. The exception is the reading at neighbouring stations
         at the same hour, which clearly improves pH.
   \item Every model fails in the Lower Colorado, whose three stations all sit below large dams.
+  \item Training on the longer record (water years 2021--2026) does not help as it stands: the
+        model has no year term, so water temperature comes out about $1$\,\textdegree C too cold.
 \end{itemize}
 
 \section{The Model and the Graph}
@@ -514,6 +516,52 @@ Spline GAM      & $+0.004$ & $-0.009$ & $-0.002$ & $+0.141^{*}$ & 0.153 \\
 This feature needs live readings from neighbouring stations, so it answers a different question:
 filling in an unmonitored site while its neighbours report.
 
+\section{Longer Training History}
+
+The benchmark uses only part of each station's record: 85\% of the water-temperature test rows are
+from 2025--26. We downloaded every station back to October 2020 (water year 2021), which adds about
+$5\times$ the training rows. The held-out station is still tested on exactly the same rows, and its
+own added rows are never used, so the comparison is paired (Table~\ref{tab:hist}).
+
+\begin{table}[H]
+\centering
+\caption{LOO $R^2$ trained on the current rows $\to$ with the 2021--2026 history (same test rows).
+$^{*}$: the paired station-bootstrap 95\% interval of the change excludes zero.}
+\label{tab:hist}
+\begin{tabular}{l ccccc}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Graph-Laplacian & $.863\to.816^{*}$ & $.700\to.699$ & $\mathbf{.385\to.334}$ & $.117\to-.037^{*}$ & $.104\to.043$ \\
+OLS             & $.863\to.840^{*}$ & $.695\to.702$ & $-.099\to-.022^{*}$ & $-.014\to-.011$ & $.136\to.032$ \\
+Ridge           & $.864\to.840^{*}$ & $.701\to.708$ & $-.110\to-.032^{*}$ & $.003\to.013$ & $.136\to.031$ \\
+Elastic Net     & $.863\to.841^{*}$ & $.705\to.712$ & $-.109\to-.039^{*}$ & $.023\to.029$ & $.136\to.033$ \\
+Spline GAM      & $.838\to.745$ & $.708\to.719$ & $.022\to.055$ & $.012\to.009$ & $.091\to.085$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Water temperature gets worse for every model.} Almost all of the loss is a shift in level:
+        the models now predict the held-out stations about $1$\,\textdegree C too cold, while the
+        error within each station is unchanged. The model has no year term, so it learns the
+        2021--26 average, but the test rows are mostly from 2025--26, and water year 2026 was
+        $1.2$\,\textdegree C warmer than usual (2023 was $1.1$\,\textdegree C colder). Removing one
+        common offset brings Ridge back to $0.860$.
+  \item \textbf{pH: the graph model loses its lead} ($0.117\to-0.037$), because the inner loop now
+        chooses much heavier shrinkage. The other models do not change.
+  \item \textbf{Specific conductance:} the linear models gain about $0.08$ but stay below zero; the
+        graph model falls slightly and keeps a large lead ($0.334$ against $0.055$).
+  \item DO gains less than $0.01$; turbidity falls for the linear models.
+  \item \textbf{Upper-basin stations only} (the same predictions, scored without the Lower
+        Colorado): the same pattern. Water temperature falls by about $0.025$ for every model
+        ($0.899\to0.876$ for the graph model), specific conductance $0.425\to0.391$ (Ridge
+        $-0.07\to0.02$), pH $0.140\to0.028$, now behind the Spline GAM ($0.087$). In the
+        headwaters alone the offset is small and water temperature holds at $0.935$.
+\end{itemize}
+The longer record should be retried with a water-year effect estimated from the training stations,
+which are observed at the same times as the held-out station.
+
 \section{Conclusions and Next Steps}
 
 \begin{itemize}
@@ -523,8 +571,10 @@ filling in an unmonitored site while its neighbours report.
         gradient boosting is best.
   \item Claims should be limited to interpolation within monitored subbasins. Predicting an
         unmonitored subbasin is not supported.
-  \item \textbf{Running:} the model with the longer record back to October 2020 (about $5\times$ the
-        rows), and gradient boosting with the neighbour reading.
+  \item The longer record (back to October 2020) does not help without a year term.
+  \item \textbf{Running:} gradient boosting with the neighbour reading.
+  \item \textbf{Proposed:} the longer record with a water-year effect, with turbidity clipped at
+        the sensor maximum, also retrained on the upper basin only.
   \item \textbf{Proposed:} a dam-tailwater indicator, or a weaker seasonal cycle below major dams,
         for the Lower Colorado stations.
 \end{itemize}

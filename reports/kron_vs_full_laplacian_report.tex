@@ -1760,6 +1760,154 @@ Turbidity     & Graph-Laplacian & $0.104$ & $0.088$ & $-0.016$ & ($-0.14$, $0.03
 \end{itemize}
 
 % =====================================================================
+\section{Longer training history}\label{sec:history}
+
+The benchmark rows of each station cover only part of its record (85\% of the water-temperature test
+rows are from 2025--26). \code{download\_history.py} downloads every benchmark station and variable
+from water year 2021 (fixed before any results) to the end of each series, and
+\code{build\_history.py} builds extended tables that keep every current row unchanged and add
+862{,}708 node-hours outside them (Table~\ref{tab:historydata} gives the counts). On the hours where
+both exist, 93--97\% of the values match the current data exactly. With
+\code{BENCHMARK\_HISTORY=data/benchmark\_data\_history}, the added rows of the training stations enter
+training, while the held-out station is still tested on exactly its current rows and its added rows
+are never used, so the comparison with Table~\ref{tab:final} is paired on identical test rows. The run
+covers the five fast models and the graph model.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Node-hours of the current benchmark and those added by the longer history (water years
+2021--2026).}
+\label{tab:historydata}
+\begin{tabular}{l rr rr}
+\toprule
+Variable & Current & Stations & Added & Stations \\
+\midrule
+Water temp.   & 151{,}801 & 25 & 862{,}174 & 25 \\
+DO            & 115{,}356 & 17 & 504{,}134 & 16 \\
+Spec.\ cond.  & 150{,}997 & 25 & 744{,}930 & 24 \\
+pH            & 122{,}122 & 19 & 510{,}860 & 18 \\
+Turbidity     &  90{,}843 & 17 & 391{,}022 & 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Longer history: paired $\Delta R^2$ against the same model trained on the current rows only
+(LOO, identical test rows), with the station-bootstrap 95\% interval. Better/worse counts stations
+with lower/higher mean squared error. Intervals that exclude zero are in bold.}
+\label{tab:history}
+\begin{tabular}{ll rrrcc}
+\toprule
+Target & Model & Current & History & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.863$ & $0.816$ & $\mathbf{-0.048}$ & ($-0.11$, $-0.01$) & 11/13 \\
+              & OLS             & $0.863$ & $0.840$ & $\mathbf{-0.024}$ & ($-0.04$, $-0.01$) & 10/14 \\
+              & Ridge           & $0.864$ & $0.840$ & $\mathbf{-0.024}$ & ($-0.05$, $-0.01$) & 11/13 \\
+              & Elastic Net     & $0.863$ & $0.841$ & $\mathbf{-0.023}$ & ($-0.04$, $-0.01$) & 10/14 \\
+              & Spline GAM      & $0.838$ & $0.745$ & $-0.094$ & ($-0.28$, $0.01$) & 10/14 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $0.699$ & $-0.001$ & ($-0.02$, $0.02$) & 9/8 \\
+              & OLS             & $0.695$ & $0.702$ & $+0.007$ & ($-0.01$, $0.02$) & 10/7 \\
+              & Ridge           & $0.701$ & $0.708$ & $+0.008$ & ($-0.00$, $0.02$) & 11/6 \\
+              & Elastic Net     & $0.705$ & $0.712$ & $+0.007$ & ($-0.01$, $0.03$) & 9/8 \\
+              & Spline GAM      & $0.708$ & $0.719$ & $+0.011$ & ($-0.00$, $0.03$) & 13/4 \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $0.334$ & $-0.050$ & ($-0.11$, $0.06$) & 10/14 \\
+              & OLS             & $-0.099$ & $-0.022$ & $\mathbf{+0.077}$ & ($0.01$, $0.24$) & 15/9 \\
+              & Ridge           & $-0.110$ & $-0.032$ & $\mathbf{+0.077}$ & ($0.02$, $0.24$) & 15/9 \\
+              & Elastic Net     & $-0.109$ & $-0.039$ & $\mathbf{+0.070}$ & ($0.01$, $0.22$) & 15/9 \\
+              & Spline GAM      & $0.022$ & $0.055$ & $+0.033$ & ($-0.01$, $0.19$) & 17/7 \\
+\addlinespace
+pH            & Graph-Laplacian & $0.117$ & $-0.037$ & $\mathbf{-0.155}$ & ($-0.29$, $-0.05$) & 8/11 \\
+              & OLS             & $-0.014$ & $-0.011$ & $+0.003$ & ($-0.07$, $0.07$) & 12/7 \\
+              & Ridge           & $0.003$ & $0.013$ & $+0.010$ & ($-0.05$, $0.08$) & 12/7 \\
+              & Elastic Net     & $0.023$ & $0.029$ & $+0.006$ & ($-0.03$, $0.04$) & 8/11 \\
+              & Spline GAM      & $0.012$ & $0.009$ & $-0.003$ & ($-0.12$, $0.10$) & 13/6 \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.104$ & $0.043$ & $-0.061$ & ($-0.42$, $0.33$) & 8/9 \\
+              & OLS             & $0.136$ & $0.032$ & $-0.104$ & ($-0.26$, $0.04$) & 9/8 \\
+              & Ridge           & $0.136$ & $0.031$ & $-0.105$ & ($-0.21$, $0.05$) & 9/8 \\
+              & Elastic Net     & $0.136$ & $0.033$ & $-0.104$ & ($-0.20$, $0.05$) & 9/8 \\
+              & Spline GAM      & $0.091$ & $0.085$ & $-0.006$ & ($-0.07$, $0.31$) & 12/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Longer history on the upper-basin stations: LOO $R^2$ current $\to$ history, scored on the
+stations of each subset. The models are those of Table~\ref{tab:history}, trained on all stations,
+so this is a breakdown of the same predictions, not an upper-basin retrain. The subsets were chosen
+after seeing the results and are descriptive only.}
+\label{tab:history_region}
+\begin{tabular}{ll c ccc}
+\toprule
+Subset & Target & Stations & Graph-Laplacian & Ridge & Spline GAM \\
+\midrule
+Upper Basin     & Water temp.  & 21 & $0.899\to0.876$ & $0.899\to0.874$ & $0.880\to0.871$ \\
+(excl.\ Lower)  & DO           & 14 & $0.795\to0.801$ & $0.800\to0.808$ & $0.810\to0.815$ \\
+                & Spec.\ cond. & 21 & $\mathbf{0.425\to0.391}$ & $-0.068\to0.018$ & $0.027\to0.053$ \\
+                & pH           & 16 & $0.140\to0.028$ & $0.024\to0.067$ & $0.039\to0.087$ \\
+                & Turbidity    & 16 & $0.103\to0.105$ & $0.144\to0.066$ & $0.090\to0.083$ \\
+\addlinespace
+Excl.\ San Juan & Water temp.  & 18 & $0.900\to0.876$ & $0.901\to0.872$ & $0.877\to0.867$ \\
+and Lower       & Spec.\ cond. & 18 & $\mathbf{0.381\to0.345}$ & $-0.074\to-0.007$ & $-0.003\to0.023$ \\
+                & pH           & 12 & $0.216\to0.114$ & $0.016\to0.067$ & $0.082\to0.142$ \\
+\addlinespace
+Headwaters      & Water temp.  &  7 & $0.937\to0.934$ & $0.937\to0.936$ & $0.909\to0.932$ \\
+only            & Spec.\ cond. &  7 & $\mathbf{0.521\to0.514}$ & $-0.174\to0.023$ & $0.269\to0.329$ \\
+                & pH           &  6 & $0.161\to0.017$ & $-0.003\to0.014$ & $0.056\to0.026$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results} (Tables~\ref{tab:history} and~\ref{tab:history_region}).
+\begin{itemize}
+  \item \textbf{The longer history helps no target for the graph model.} Water temperature and pH
+        fall with intervals below zero; specific conductance and turbidity fall within noise; DO is
+        unchanged. For the other models it helps only specific conductance (linear models $+0.07$
+        to $+0.08$, intervals above zero), where they stay below zero, and DO slightly (about
+        $+0.008$, within noise). The graph model's lead for specific conductance shrinks from $+0.36$
+        to $+0.28$ over the next model (Spline GAM, $0.055$).
+  \item \textbf{Water temperature: a common cold offset.} With the history every model predicts the
+        held-out stations about $1$\,\textdegree C too cold on average (mean signed station bias
+        $-0.92$ to $-0.98$\,\textdegree C for the graph and linear models, against $-0.05$ before).
+        The within-station error variance is unchanged ($5.96\to6.01$); the loss is all in the
+        station-level bias. The model has no year term, so the longer history moves its level to
+        the 2021--26 average, while the test rows are mostly from 2025--26 and water year 2026 was
+        $1.2$\,\textdegree C warmer than each station's usual value for the day of year (water year
+        2023 was $1.1$\,\textdegree C colder; the other years are within $0.1$). In the current
+        benchmark the training and test stations cover the same months, so this offset cancels.
+        Subtracting a single common offset (a descriptive check, not a fair model) restores Ridge
+        to $0.860$ and the graph model to $0.840$.
+  \item The rest of the graph model's water-temperature loss is one fold: with 09429490 (above
+        Imperial Dam) held out, the inner loop chose $\lambda_L=0.03$ instead of $30$--$100$ as in
+        every other fold, and that station's bias went from $+0.2$ to $-5.8$\,\textdegree C.
+  \item \textbf{pH: the inner loop changes its choice.} On the current rows it chose $\lambda_L
+        \approx 10^{-4}$ in nearly every fold; with the history it mostly chooses $\lambda_L=3$ and
+        $\lambda_\beta=3$. The mean signed bias stays near zero, but the station biases spread
+        (standard deviation $0.11\to0.15$), so the graph model loses the station-level information
+        that gave it its lead. The conventional models do not change.
+  \item \textbf{Turbidity:} the linear models lose about $0.10$ through larger station-level bias.
+        The added years contain readings of 3{,}800--4{,}000\,FNU that look like sensor maxima;
+        whether they cause the loss was not tested.
+  \item \textbf{The upper basin shows the same pattern} (Table~\ref{tab:history_region}). Without
+        the Lower Colorado, water temperature still falls by about $0.025$ for every model with a
+        similar offset ($-0.8$\,\textdegree C), so the loss is not caused by the dam tailwaters. In
+        the headwaters alone the offset is only $-0.2$\,\textdegree C and water temperature holds at
+        about $0.935$. The graph model's specific conductance falls by $0.01$--$0.04$ but keeps a
+        large lead, and its pH falls in every subset, where the Spline GAM overtakes it.
+  \item \textbf{Next step.} The fair way to use the history is to add a water-year (or monthly)
+        effect estimated from the training stations, which are observed at the same times as the
+        held-out station, and to clip turbidity at the sensor maximum; an upper-basin-only retrain
+        would then test whether the extra years help there. The option stays off by default.
+\end{itemize}
+
+% =====================================================================
 \section{Conclusions}
 
 \begin{enumerate}
@@ -1851,6 +1999,13 @@ Turbidity     & Graph-Laplacian & $0.104$ & $0.088$ & $-0.016$ & ($-0.14$, $0.03
         $0.05$ to the linear models for specific conductance and nothing to the graph model. This
         is a different task (live neighbours required), so it should be reported separately from
         prediction from map features alone.
+  \item \textbf{A longer training history (water years 2021--2026) does not help as used}
+        (Section~\ref{sec:history}). Water temperature falls for every model ($-0.02$ to $-0.05$,
+        intervals below zero) because the model, with no year term, learns the multi-year level
+        while the test rows come from a warmer recent period, and the graph model loses its pH lead
+        ($0.117\to-0.037$) as the inner loop moves to heavier shrinkage. Only the linear models gain,
+        for specific conductance ($+0.08$), and they stay below zero. The same holds on the
+        upper-basin stations. A water-year effect is needed before the history can be judged.
 \end{enumerate}
 
 \paragraph{Caveats.} With only 14--24 stations, differences in $R^2$ below roughly $0.03$--$0.05$
@@ -1874,9 +2029,8 @@ overfit, and its $R^2$ values are not comparable with the benchmark. The dischar
 different task (flow-gauged stations only, 14--20 stations), so their $R^2$ values are not
 comparable with Table~\ref{tab:final}, and their gradient boosting and random forest runs had not
 finished when this section was written. The neighbour-reading and upstream runs cover only the
-five fast models and the graph model. Gradient boosting with the neighbour reading and the
-longer-history run had not finished
-when this section was written. In the neighbour run the inner loop reuses the outer fold's
+five fast models and the graph model, and so does the longer-history run. Gradient boosting with
+the neighbour reading had not finished when this section was written. In the neighbour run the inner loop reuses the outer fold's
 neighbour features, so its choices are mildly optimistic.
 
 \paragraph{Reproducibility.} All results come from \code{largest\_uncompressed\_laplacian\_fixed.ipynb}
@@ -1945,5 +2099,15 @@ APIs, about a minute), saved in \code{data/benchmark\_data/upstream\_attributes.
 comparisons come from \code{compare\_runs.py} against \code{results/benchmark\_results\_inner\_fs\_graph/}
 (graph model) and \code{results/benchmark\_results\_inner\_fs/} (other models), saved as
 \code{results/upstream\_vs\_base\_*.csv} and \code{results/neighbour\_vs\_base\_*.csv}.
+Tables~\ref{tab:historydata}--\ref{tab:history_region} come from \code{download\_history.py}
+(USGS Water Data API, server, a few hours), \code{build\_history.py} (written to
+\code{data/benchmark\_data\_history/}, not tracked) and a server run with
+\code{BENCHMARK\_HISTORY=data/benchmark\_data\_history} and
+\code{BENCHMARK\_MODELS=Dummy,OLS,Ridge,Elastic Net,Spline GAM,Graph-Laplacian}, saved in
+\code{results/benchmark\_results\_history/}. The paired comparisons are
+\code{results/history\_vs\_base\_*.csv} (\code{compare\_runs.py}); the bias decomposition, the
+common-offset check, the regional subsets and the water-year anomalies come from
+\code{history\_analysis.py} (seconds), saved in \code{results/history\_diagnostics.csv},
+\code{results/history\_vs\_base\_by\_region.csv} and \code{results/history\_wt\_anomaly\_by\_wy.csv}.
 
 \end{document}
