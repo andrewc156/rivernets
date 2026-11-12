@@ -1,0 +1,13 @@
+/home/achincea/rivernets/making_the_graph/rivernets-github/build_history.py:120: Pandas4Warning: Series.dt.dayofyear is deprecated and will be removed in a future version. Use Series.dt.day_of_year instead.
+  doy = dt.dt.dayofyear + hour / 24.0
+            variable    rows  stations  node_hours      first       last
+    DO concentration   added        16      504134 2020-10-01 2026-10-02
+    DO concentration current        17      115356 2024-04-01 2026-10-02
+   Water temperature   added        25      862174 2020-10-01 2026-10-02
+   Water temperature current        25      151801 2020-10-05 2026-10-02
+Specific conductance   added        24      744930 2020-10-01 2026-10-02
+Specific conductance current        25      150997 2020-10-05 2026-10-02
+           Turbidity   added        15      391022 2020-10-01 2026-10-02
+           Turbidity current        17       90843 2020-10-07 2026-07-31
+                  pH   added        18      510860 2020-10-01 2025-10-02
+                  pH current        19      122122 2020-10-05 2026-08-18
