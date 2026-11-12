@@ -5,3 +5,4 @@
 benchmark_results/** filter=lfs diff=lfs merge=lfs -text
 *.tiff filter=lfs diff=lfs merge=lfs -text
 *.tif filter=lfs diff=lfs merge=lfs -text
+data/usgs/history_raw/** filter=lfs diff=lfs merge=lfs -text
