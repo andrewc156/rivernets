@@ -7,6 +7,7 @@ usage: python make_poster_figures.py      (seconds; no model fitting)
   poster_3_map.*      river network map: where the graph model beats Ridge for specific conductance
   poster_4_graph.*    the river (MERIT cells) next to the graph built from it
   poster_5_zoom.*     close-up: nodes on the river and edges following it
+  poster_6_uncompressed.*  the 67,401-node uncompressed graph and a close-up of its nodes
 
 reads results/split_comparison.csv, results/split_subbasin_folds.csv and the LOO
 predictions (results/benchmark_results_inner_fs_graph, results/benchmark_results_inner_fs)
@@ -413,6 +414,88 @@ def fig_zoom():
     save(fig, "poster_5_zoom")
 
 
+def fig_uncompressed():
+    with open("graphs/colorado/largest_river_component.pkl", "rb") as f:
+        U = pickle.load(f)
+    lon = {n: d["longitude"] for n, d in U.nodes(data=True)}
+    lat = {n: d["latitude"] for n, d in U.nodes(data=True)}
+    kind = {}
+    for n, d in U.nodes(data=True):
+        if d.get("station_count", 0) > 0:
+            kind[n] = "station"
+        elif U.in_degree(n) >= 2:
+            kind[n] = "confluence"
+        elif U.in_degree(n) == 0 or U.out_degree(n) == 0:
+            kind[n] = "end"
+        else:
+            kind[n] = "pass"
+    counts = pd.Series(kind).value_counts()
+    style = {"station": ("o", GRAPH, SURFACE, 6, f"Station cell ({counts['station']})"),
+             "confluence": ("D", CONFL, SURFACE, 5, f"Confluence ({counts['confluence']})"),
+             "end": ("o", SURFACE, MUTED, 4, f"Source or outlet ({counts['end']})"),
+             "pass": ("o", "#8fb5e6", "none", 2, f"Pass-through cell ({counts['pass']:,})")}
+
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(14, 8.2), gridspec_kw={"width_ratios": [1, 1.15]})
+    # left: every node of the 67,401-node graph
+    geo_axes(a1)
+    a1.set_xlim(-115.5, -105.6); a1.set_ylim(31.6, 42.4)
+    pas = [n for n in U if kind[n] == "pass"]
+    a1.scatter([lon[n] for n in pas], [lat[n] for n in pas], s=0.35, color=style["pass"][1], lw=0, zorder=2)
+    for k, sz in [("end", 30), ("confluence", 34), ("station", 55)]:
+        m, fc, ec, z, _ = style[k]
+        ns = [n for n in U if kind[n] == k]
+        a1.scatter([lon[n] for n in ns], [lat[n] for n in ns], marker=m, s=sz, color=fc,
+                   edgecolor=ec, lw=1.3, zorder=z)
+    x0, x1, y0, y1 = -108.586, -108.553, 39.0445, 39.0655
+    a1.add_patch(mpl.patches.Rectangle((x0 - 0.13, y0 - 0.11), (x1 - x0) + 0.26, (y1 - y0) + 0.22,
+                                       fill=False, ec=INK, lw=1.2, zorder=7))
+    a1.annotate("right panel", (x1 + 0.13, y1 + 0.11), xytext=(6, 2), textcoords="offset points",
+                fontsize=10.5, color=INK2, ha="left", va="bottom")
+    scalebar(a1, -115.2, 32.0, 200)
+    a1.set_title(f"Whole basin: {U.number_of_nodes():,} nodes, {U.number_of_edges():,} edges",
+                 loc="left", fontweight="bold", color=INK, pad=8)
+
+    # right: close-up, every node and every edge, pointing downstream
+    geo_axes(a2)
+    a2.set_xlim(x0, x1); a2.set_ylim(y0, y1)
+    inside = [n for n in U if x0 - 0.005 < lon[n] < x1 + 0.005 and y0 - 0.005 < lat[n] < y1 + 0.005]
+    for u in inside:
+        for v in U.successors(u):
+            a2.annotate("", xy=(lon[v], lat[v]), xytext=(lon[u], lat[u]),
+                        arrowprops=dict(arrowstyle="-|>,head_length=0.45,head_width=0.22", color=INK2,
+                                        lw=1.1, shrinkA=6, shrinkB=6), zorder=2)
+    for k, sz in [("pass", 70), ("end", 80), ("confluence", 170), ("station", 200)]:
+        m, fc, ec, z, _ = style[k]
+        ns = [n for n in inside if kind[n] == k]
+        a2.scatter([lon[n] for n in ns], [lat[n] for n in ns], marker=m, s=sz,
+                   color=GRAPH if k == "pass" else fc, alpha=0.55 if k == "pass" else 1,
+                   edgecolor=SURFACE if k != "end" else ec, lw=1.5, zorder=z + 2)
+    for sp in a2.spines.values():
+        sp.set_visible(True); sp.set_color(INK); sp.set_linewidth(1)
+    scalebar(a2, x0 + 0.002, y0 + 0.0012, 0.5, lat_ref=39.05)
+    a2.set_title("Close-up at Grand Junction: one node per 90 m cell", loc="left", fontweight="bold",
+                 color=INK, pad=8)
+    for text, xy in [("Colorado River\n(downstream)", (-108.5715, 39.0640)),
+                     ("Colorado River\n(upstream)", (-108.5590, 39.0605)),
+                     ("Gunnison River", (-108.5605, 39.0470))]:
+        a2.text(*xy, text, fontsize=11, color=INK2, style="italic", ha="center", va="center", zorder=9,
+                bbox=dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none", alpha=0.85))
+
+    h = [plt.Line2D([], [], ls="", marker=m, ms=7 if k != "pass" else 5,
+                    mfc=(GRAPH if k == "pass" else fc), mec=(ec if k == "end" else (GRAPH if k == "pass" else fc)),
+                    alpha=0.6 if k == "pass" else 1, mew=1.3, label=lab)
+         for k, (m, fc, ec, _, lab) in style.items()]
+    h.append(plt.Line2D([], [], color=MUTED, lw=1, marker=">", ms=5, label="Edge, pointing downstream"))
+    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.0, 0.905), ncol=5, frameon=False,
+               fontsize=10.5, handletextpad=0.3, columnspacing=1.2)
+    fig.subplots_adjust(wspace=0.06, top=0.88)
+    title(fig, "The uncompressed river graph",
+          "Every MERIT Hydro cell is a node, linked to the next cell downstream. All but "
+          f"{U.number_of_nodes() - counts['pass']} nodes simply pass the flow on; compression removes them, "
+          "leaving the 67-node graph.")
+    save(fig, "poster_6_uncompressed")
+
+
 def main():
     sc = pd.read_csv("results/split_comparison.csv")
     fig_models(sc)
@@ -420,6 +503,7 @@ def main():
     fig_map()
     fig_graph()
     fig_zoom()
+    fig_uncompressed()
 
 
 if __name__ == "__main__":
