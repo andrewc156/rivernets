@@ -85,6 +85,25 @@ NEIGHBOUR = os.environ.get("BENCHMARK_NEIGHBOUR", "") == "on"
 # default run. Stations with added rows but no current rows train in every fold
 # and are never tested.
 HISTORY_DIR = os.environ.get("BENCHMARK_HISTORY", "")
+
+# Time effect (opt-in): BENCHMARK_YEAR_EFFECT adds indicator columns of the
+# period of each row to EVERY feature candidate of every model (not offered as
+# an option, so the inner loop cannot drop it):
+#   wy     water year (October-September), WY2021-WY2026; rows after September
+#          2026 count as WY2026 (a few hundred hours); WY2021 is the reference
+#   month  calendar month of each year (e.g. 2025-07); the first month is the
+#          reference
+# The indicator coefficients are estimated from the training stations, which
+# are observed in the same periods as the held-out station, so the held-out
+# station's values never enter. Motivation (fixed before this run): with
+# BENCHMARK_HISTORY every model learned the 2021-26 level of water temperature
+# while the test rows are mostly 2025-26 (WY2026 about 1.2 C warmer than usual),
+# so it predicted about 1 C too cold. A period seen only at the held-out station
+# would get the reference level; with a station split every period has several
+# training stations. Not combined with a held-out time period.
+YEAR_EFFECT = os.environ.get("BENCHMARK_YEAR_EFFECT", "")
+if YEAR_EFFECT not in ("", "wy", "month"):
+    raise ValueError("BENCHMARK_YEAR_EFFECT must be '', 'wy' or 'month'")
 NEIGHBOUR_K = 3
 NEIGHBOUR_COL = "nbr_anom"
 if DISCHARGE_MODE not in ("", "baseline", "on"):
@@ -127,6 +146,8 @@ if NEIGHBOUR and (TIME_SPLIT or SPLIT in ("time_within", "random_rows")):
     raise ValueError("BENCHMARK_NEIGHBOUR needs a station split (the test station unseen)")
 if HISTORY_DIR and (TIME_SPLIT or SPLIT in ("time_within", "random_rows")):
     raise ValueError("BENCHMARK_HISTORY needs a station split")
+if YEAR_EFFECT and (TIME_SPLIT or SPLIT in ("time_within", "random_rows")):
+    raise ValueError("BENCHMARK_YEAR_EFFECT needs a station split")
 
 if SPLIT != "loo":
     _default_results = f"results/benchmark_results_split_{SPLIT}"
@@ -137,7 +158,9 @@ elif DISCHARGE_MODE:
 elif NEIGHBOUR:
     _default_results = "results/benchmark_results_neighbour"
 elif HISTORY_DIR:
-    _default_results = "results/benchmark_results_history"
+    _default_results = "results/benchmark_results_history" + (f"_{YEAR_EFFECT}" if YEAR_EFFECT else "")
+elif YEAR_EFFECT:
+    _default_results = f"results/benchmark_results_{YEAR_EFFECT}"
 elif "upstream" in FS_STATIC_OPTIONS:
     _default_results = "results/benchmark_results_upstream"
 elif FEATURE_SELECTION == "fixed":
@@ -1353,6 +1376,33 @@ if NEIGHBOUR:
         }
 
 
+def period_indicators(time):
+    """Indicator columns of the period of each row (BENCHMARK_YEAR_EFFECT)."""
+    t = pd.to_datetime(time, utc=True)
+    if YEAR_EFFECT == "wy":
+        period = (t.dt.year + (t.dt.month >= 10)).clip(2021, 2026).astype(str)
+        prefix = "wy_"
+    else:
+        period = t.dt.strftime("%Y-%m")
+        prefix = "ym_"
+    levels = sorted(period.unique())
+    return pd.DataFrame(
+        {f"{prefix}{lv}": (period == lv).astype(float).to_numpy() for lv in levels[1:]},
+        index=time.index
+    )
+
+
+if YEAR_EFFECT:
+    for target, cfg in TARGET_CONFIGS.items():
+        ind = period_indicators(cfg["df"]["time"])
+        cfg["df"] = pd.concat([cfg["df"].drop(columns=ind.columns, errors="ignore"), ind], axis=1)
+        cfg["candidates"] = {
+            name: [*features, *ind.columns] for name, features in cfg["candidates"].items()
+        }
+        print(f"Year effect ({YEAR_EFFECT}) {target}: {ind.shape[1]} indicators, "
+              f"reference {'WY2021' if YEAR_EFFECT == 'wy' else 'first month'}")
+
+
 # Verify Features
 all_ok = True
 
@@ -2537,6 +2587,7 @@ benchmark_config = {
         "discharge": DISCHARGE_MODE or "off",
         "neighbour": f"on, K={NEIGHBOUR_K}" if NEIGHBOUR else "off",
         "history": HISTORY_DIR or "off",
+        "year_effect": YEAR_EFFECT or "off",
         "time_split": TIME_SPLIT or "off",
         "split": SPLIT,
         "split_repeats": SPLIT_REPEATS,
