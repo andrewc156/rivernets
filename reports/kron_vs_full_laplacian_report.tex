@@ -1532,6 +1532,88 @@ San Juan & 4 & $-0.05$ & $-0.02$ & $0.30$ & $-0.29$ & $-0.08$ & $-0.38$ \\
         Table~\ref{tab:subbasin_loo} and of this discussion.
 \end{itemize}
 
+\begin{table}[h]
+\centering
+\small
+\caption{Leave-one-station-out $R^2$ within each subbasin, for every target: the benchmark
+predictions of Tables~\ref{tab:final} and~\ref{tab:ideas}, grouped by subbasin. Each station is
+predicted with only itself held out. $R^2$ is computed over the subbasin's stations (equal station
+weights) against the subbasin's own mean. The best model other than Dummy is in bold; ties at two
+decimals are broken by the unrounded value. The single Lower Colorado turbidity station is omitted
+(near-constant series, $R^2<-10^4$ for every model).}
+\label{tab:loo_by_subbasin}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l r rrrrrrr}
+\toprule
+Subbasin & Stations & Dummy & Ridge & Spline GAM & Random forest & Gradient boosting & Graph-Laplacian & Graph + GB \\
+\midrule
+\multicolumn{9}{l}{\emph{Water temperature}} \\
+Colorado headwaters & 7 & $-0.05$ & $0.94$ & $0.91$ & $0.92$ & $\mathbf{0.95}$ & $0.94$ & $0.94$ \\
+Gunnison + Colorado-Dolores & 5 & $-0.14$ & $0.88$ & $0.88$ & $0.93$ & $\mathbf{0.95}$ & $0.88$ & $0.91$ \\
+Green & 6 & $-0.02$ & $0.86$ & $0.83$ & $0.72$ & $\mathbf{0.86}$ & $0.86$ & $0.84$ \\
+San Juan & 3 & $-0.11$ & $0.87$ & $0.88$ & $\mathbf{0.89}$ & $0.87$ & $0.87$ & $0.81$ \\
+Lower Colorado + Verde & 3 & $-0.76$ & $\mathbf{0.20}$ & $0.05$ & $-1.15$ & $-0.65$ & $0.20$ & $-0.01$ \\
+\midrule
+\multicolumn{9}{l}{\emph{DO}} \\
+Colorado headwaters & 7 & $-0.04$ & $0.76$ & $0.75$ & $\mathbf{0.78}$ & $0.77$ & $0.75$ & $0.74$ \\
+Gunnison + Colorado-Dolores & 4 & $-0.13$ & $0.82$ & $0.81$ & $0.85$ & $\mathbf{0.86}$ & $0.83$ & $0.82$ \\
+Green & 2 & $-0.01$ & $0.81$ & $0.91$ & $0.95$ & $\mathbf{0.95}$ & $0.86$ & $0.85$ \\
+San Juan & 1 & $-0.05$ & $0.89$ & $0.90$ & $0.92$ & $\mathbf{0.94}$ & $0.76$ & $0.84$ \\
+Lower Colorado + Verde & 3 & $-0.26$ & $-0.41$ & $-0.43$ & $-0.98$ & $-0.45$ & $\mathbf{-0.37}$ & $-0.45$ \\
+\midrule
+\multicolumn{9}{l}{\emph{Specific conductance}} \\
+Colorado headwaters & 7 & $-0.10$ & $-0.17$ & $0.27$ & $-0.21$ & $-0.19$ & $0.52$ & $\mathbf{0.55}$ \\
+Gunnison + Colorado-Dolores & 5 & $-0.34$ & $-0.30$ & $-0.29$ & $-0.25$ & $-0.23$ & $0.11$ & $\mathbf{0.11}$ \\
+Green & 6 & $-0.92$ & $-0.88$ & $-1.56$ & $-2.68$ & $-1.98$ & $\mathbf{0.37}$ & $0.21$ \\
+San Juan & 3 & $-6.26$ & $-6.99$ & $-4.73$ & $-5.20$ & $-5.14$ & $\mathbf{-0.79}$ & $-1.35$ \\
+Lower Colorado + Verde & 3 & $-0.09$ & $-1.03$ & $\mathbf{-0.11}$ & $-1.35$ & $-0.72$ & $-0.52$ & $-0.70$ \\
+\midrule
+\multicolumn{9}{l}{\emph{pH}} \\
+Colorado headwaters & 6 & $-0.05$ & $-0.00$ & $0.06$ & $-0.14$ & $-0.07$ & $\mathbf{0.16}$ & $0.10$ \\
+Gunnison + Colorado-Dolores & 4 & $-0.27$ & $-0.08$ & $-0.08$ & $0.14$ & $-0.08$ & $0.15$ & $\mathbf{0.19}$ \\
+Green & 2 & $-0.61$ & $-0.57$ & $-0.21$ & $-1.14$ & $-1.18$ & $\mathbf{-0.06}$ & $-0.41$ \\
+San Juan & 4 & $-0.05$ & $-0.05$ & $-0.13$ & $-0.11$ & $0.30$ & $-0.08$ & $\mathbf{0.30}$ \\
+Lower Colorado + Verde & 3 & $-0.25$ & $-0.40$ & $-0.44$ & $-2.62$ & $-2.70$ & $\mathbf{-0.27}$ & $-0.56$ \\
+\midrule
+\multicolumn{9}{l}{\emph{Turbidity}} \\
+Colorado headwaters & 6 & $-0.72$ & $-0.72$ & $-1.01$ & $-0.72$ & $-0.38$ & $-0.44$ & $\mathbf{-0.26}$ \\
+Gunnison + Colorado-Dolores & 4 & $-0.07$ & $-0.05$ & $-0.04$ & $0.14$ & $\mathbf{0.38}$ & $0.00$ & $0.15$ \\
+Green & 2 & $-0.02$ & $-0.07$ & $-0.38$ & $-0.37$ & $-0.16$ & $\mathbf{-0.01}$ & $-0.21$ \\
+San Juan & 4 & $-0.16$ & $0.07$ & $0.03$ & $0.01$ & $\mathbf{0.35}$ & $-0.00$ & $0.32$ \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Which subbasins the LOO models predict well} (Table~\ref{tab:loo_by_subbasin}). This
+uses the ordinary LOO predictions, grouped by subbasin.
+\begin{itemize}
+  \item \textbf{The graph model's specific conductance and pH skill sits in the three upper
+        subbasins.} For specific conductance it reaches $0.52$ (headwaters), $0.37$ (Green) and
+        $0.11$ (Gunnison), where every non-graph model except the Spline GAM in the headwaters is
+        negative. For pH it is best or near best in the headwaters ($0.16$) and Gunnison ($0.15$).
+  \item \textbf{In the San Juan, specific conductance is poorly predicted by every model}, but the
+        graph model ($-0.79$) is far better than the rest ($-4.7$ to $-7.0$). This subbasin's
+        stations differ in level more than any predictor explains.
+  \item \textbf{Water temperature and DO are predicted well in four of five subbasins} ($0.72$--$0.95$),
+        with gradient boosting or random forest best for DO in all four ($0.01$--$0.18$ above the
+        graph model, the largest gap at the single San Juan station). Gradient boosting is also the only
+        model clearly positive for turbidity, in the Gunnison ($0.38$) and San Juan ($0.35$).
+  \item \textbf{The Lower Colorado and Verde fail for every target and model}, including water
+        temperature (best $0.20$). All three stations are tailwaters of large dams: 09380000 (Lees
+        Ferry, below Glen Canyon Dam), 09510000 (Verde River below Bartlett Dam) and 09429490 (above
+        Imperial Dam, below the Hoover--Davis--Parker chain). Their water temperature varies little
+        within the record (standard deviation $2.4$--$4.4$\,\textdegree C, median $2.5$, against
+        medians of $5.7$--$6.5$\,\textdegree C in the other subbasins; the record lengths differ, so this
+        comparison is indicative). The dams release deep reservoir water with a muted, delayed annual
+        cycle. A seasonal model fitted mostly on unregulated stations then predicts a cycle that is
+        not there. The small within-subbasin variance also makes $R^2$ harsh here, so moderate
+        errors give a low value.
+  \item The dam variant of Section~\ref{sec:ideas} only changes the graph geometry, so it cannot
+        change the seasonal terms that fail here. A tailwater indicator, or a seasonal amplitude
+        allowed to differ below major dams, would target this directly. It was not tried, and with
+        only three such stations it would need care to avoid tuning to them.
+\end{itemize}
+
 \paragraph{Summary.} The graph model's main advantage (specific conductance and pH at unmonitored
 stations) holds under the held-out time period against gradient boosting, but there it no longer
 beats the training mean for pH. It survives twenty 80/20 station draws, at a lower level for
@@ -1756,7 +1838,10 @@ Turbidity     & Graph-Laplacian & $0.104$ & $0.088$ & $-0.016$ & ($-0.14$, $0.03
         Ridge and gradient boosting are negative in all five (Table~\ref{tab:subbasin_loo}), so its
         skill comes from other stations of the same subbasin. Water temperature transfers between
         subbasins with almost no loss. Claims about the graph model should be limited to sites in
-        subbasins that already have monitored stations.
+        subbasins that already have monitored stations. Under LOO its skill sits in the three upper
+        subbasins (Table~\ref{tab:loo_by_subbasin}). Every model fails in the Lower Colorado and
+        Verde, whose three stations are all below large dams, even for water temperature (best
+        $0.20$).
   \item \textbf{Upstream-watershed geology and crop land do not help} (Table~\ref{tab:upstream}),
         although the inner loop chose them for the graph model in 20 of 24 specific conductance
         folds. The network smoothing already carries most of that information.
