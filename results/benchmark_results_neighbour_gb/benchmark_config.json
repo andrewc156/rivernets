@@ -1,0 +1,136 @@
+{
+  "random_state": 42,
+  "ridge_alphas": [
+    0.03,
+    0.1,
+    0.3,
+    1.0,
+    3.0,
+    10.0
+  ],
+  "models": [
+    "Gradient Boosting"
+  ],
+  "graph_laplacian": {
+    "laplacians": "data/benchmark_data/effective_laplacians_clean.pkl (Kron-reduced, scaled) + unweighted_compressed, length_pow_{0.25,0.5,0.75} and confluence_compressed (built from the compressed graph, same Kron/scaling)",
+    "extended": false,
+    "average_top": 1,
+    "select": "loo",
+    "varying": [],
+    "dam_resistance": 10.0,
+    "dams_on_network": 7,
+    "tailup_ranges_km": [
+      100,
+      300,
+      1000
+    ],
+    "graph_gb_params": {
+      "learning_rate": 0.05,
+      "max_iter": 200,
+      "max_leaf_nodes": 15,
+      "l2_regularization": 1.0
+    },
+    "discharge": "off",
+    "neighbour": "on, K=3",
+    "history": "off",
+    "time_split": "off",
+    "split": "loo",
+    "split_repeats": 20,
+    "subbasins": {
+      "47787846": "Green",
+      "58738608": "Green",
+      "67739434": "Green",
+      "75465016": "Green",
+      "81497938": "Colorado headwaters",
+      "82982643": "Colorado headwaters",
+      "83027786": "Colorado headwaters",
+      "83222751": "Colorado headwaters",
+      "84197086": "Colorado headwaters",
+      "88786999": "Colorado headwaters",
+      "90706215": "Gunnison + Colorado-Dolores",
+      "92116891": "Colorado headwaters",
+      "93300040": "Green",
+      "93392084": "Gunnison + Colorado-Dolores",
+      "96496279": "Gunnison + Colorado-Dolores",
+      "96751415": "Gunnison + Colorado-Dolores",
+      "97532807": "Gunnison + Colorado-Dolores",
+      "110911305": "Green",
+      "126377584": "San Juan",
+      "129078768": "San Juan",
+      "131520862": "Lower Colorado + Verde",
+      "133114453": "San Juan",
+      "134075067": "San Juan",
+      "151170041": "Lower Colorado + Verde",
+      "186559442": "Lower Colorado + Verde",
+      "203177183": "Lower Colorado + Verde"
+    },
+    "time_split_min_hours": 720,
+    "confluence_eps": 0.1,
+    "log_target_candidates": [],
+    "weightings": [
+      "distance_only",
+      "area",
+      "width",
+      "slope",
+      "area_width",
+      "unweighted_compressed"
+    ],
+    "lambda_grid": [
+      0.0001,
+      0.001,
+      0.003,
+      0.01,
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0,
+      30.0,
+      100.0
+    ],
+    "lambda_beta_grid": [
+      0.03,
+      0.1,
+      0.3,
+      1.0,
+      3.0,
+      10.0
+    ],
+    "tuned_by": "inner leave-one-node-out, same folds and rows as the other models"
+  },
+  "feature_selection": {
+    "mode": "inner",
+    "search": "two_stage",
+    "fourier_K": [
+      1,
+      2,
+      4
+    ],
+    "static_options": [
+      "none",
+      "local_slope",
+      "reduced"
+    ],
+    "inner_row_stride": 1,
+    "chemistry": {
+      "Water temperature": [
+        "Specific conductance"
+      ],
+      "DO concentration": [
+        "Water temperature",
+        "Specific conductance"
+      ],
+      "Specific conductance": [
+        "Water temperature"
+      ],
+      "pH": [
+        "Specific conductance"
+      ],
+      "Turbidity": []
+    },
+    "selected_by": "inner leave-one-node-out MSE; candidates in feature_configs.json"
+  },
+  "validation": "Nested leave-one-node-out",
+  "training_weighting": "Equal total weight per monitoring node"
+}

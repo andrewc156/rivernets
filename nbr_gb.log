@@ -1,0 +1,348 @@
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/results/benchmark_results_neighbour_gb
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+Water temperature OK | feature candidates: 20 | predictors in union: 37
+DO concentration OK | feature candidates: 18 | predictors in union: 22
+Specific conductance OK | feature candidates: 20 | predictors in union: 21
+pH OK | feature candidates: 18 | predictors in union: 21
+Turbidity OK | feature candidates: 18 | predictors in union: 20
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Water temperature', 'DO concentration', 'Specific conductance', 'pH', 'Turbidity']
+Models: ['Gradient Boosting']
+
+================================================================================
+STARTING: Water temperature
+================================================================================
+
+Target: Water temperature
+Nodes: 24
+Rows: 144,980
+Feature candidates: 20
+Outer fold 1/24 | test 47787846Outer fold 2/24 | test 58738608Outer fold 3/24 | test 67739434Outer fold 4/24 | test 75465016Outer fold 5/24 | test 81497938Outer fold 6/24 | test 82982643Outer fold 7/24 | test 83027786Outer fold 8/24 | test 83222751Outer fold 9/24 | test 84197086Outer fold 10/24 | test 88786999Outer fold 11/24 | test 90706215Outer fold 12/24 | test 92116891Outer fold 13/24 | test 93300040Outer fold 14/24 | test 93392084Outer fold 15/24 | test 96496279Outer fold 16/24 | test 96751415Outer fold 17/24 | test 97532807Outer fold 18/24 | test 110911305Outer fold 19/24 | test 126377584Outer fold 20/24 | test 131520862Outer fold 21/24 | test 133114453Outer fold 22/24 | test 134075067Outer fold 23/24 | test 186559442Outer fold 24/24 | test 203177183
+
+Saved: Water temperature
+           Target             Model  Nodes   Rows       R2     RMSE
+Water temperature Gradient Boosting     24 144980 0.832617 2.900056
+
+================================================================================
+STARTING: DO concentration
+================================================================================
+
+Target: DO concentration
+Nodes: 17
+Rows: 114,607
+Feature candidates: 18
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 92116891Outer fold 10/17 | test 93300040Outer fold 11/17 | test 93392084Outer fold 12/17 | test 96496279Outer fold 13/17 | test 97532807Outer fold 14/17 | test 126377584Outer fold 15/17 | test 131520862Outer fold 16/17 | test 186559442Outer fold 17/17 | test 203177183
+
+Saved: DO concentration
+          Target             Model  Nodes   Rows       R2     RMSE
+DO concentration Gradient Boosting     17 114607 0.729058 0.923177
+
+================================================================================
+STARTING: Specific conductance
+================================================================================
+
+Target: Specific conductance
+Nodes: 24
+Rows: 144,980
+Feature candidates: 20
+Outer fold 1/24 | test 47787846Outer fold 2/24 | test 58738608Outer fold 3/24 | test 67739434Outer fold 4/24 | test 75465016Outer fold 5/24 | test 81497938Outer fold 6/24 | test 82982643Outer fold 7/24 | test 83027786Outer fold 8/24 | test 83222751Outer fold 9/24 | test 84197086Outer fold 10/24 | test 88786999Outer fold 11/24 | test 90706215Outer fold 12/24 | test 92116891Outer fold 13/24 | test 93300040Outer fold 14/24 | test 93392084Outer fold 15/24 | test 96496279Outer fold 16/24 | test 96751415Outer fold 17/24 | test 97532807Outer fold 18/24 | test 110911305Outer fold 19/24 | test 126377584Outer fold 20/24 | test 131520862Outer fold 21/24 | test 133114453Outer fold 22/24 | test 134075067Outer fold 23/24 | test 186559442Outer fold 24/24 | test 203177183
+
+Saved: Specific conductance
+              Target             Model  Nodes   Rows        R2      RMSE
+Specific conductance Gradient Boosting     24 144980 -0.093931 463.98513
+
+================================================================================
+STARTING: pH
+================================================================================
+
+Target: pH
+Nodes: 19
+Rows: 121,011
+Feature candidates: 18
+Outer fold 1/19 | test 67739434Outer fold 2/19 | test 81497938Outer fold 3/19 | test 82982643Outer fold 4/19 | test 83027786Outer fold 5/19 | test 83222751Outer fold 6/19 | test 84197086Outer fold 7/19 | test 88786999Outer fold 8/19 | test 90706215Outer fold 9/19 | test 93300040Outer fold 10/19 | test 93392084Outer fold 11/19 | test 96496279Outer fold 12/19 | test 97532807Outer fold 13/19 | test 126377584Outer fold 14/19 | test 129078768Outer fold 15/19 | test 131520862Outer fold 16/19 | test 133114453Outer fold 17/19 | test 134075067Outer fold 18/19 | test 186559442Outer fold 19/19 | test 203177183
+
+Saved: pH
+Target             Model  Nodes   Rows       R2     RMSE
+    pH Gradient Boosting     19 121011 -0.12323 0.251106
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+
+Target: Turbidity
+Nodes: 17
+Rows: 90,843
+Feature candidates: 18
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 93300040Outer fold 10/17 | test 93392084Outer fold 11/17 | test 96496279Outer fold 12/17 | test 97532807Outer fold 13/17 | test 126377584Outer fold 14/17 | test 129078768Outer fold 15/17 | test 131520862Outer fold 16/17 | test 133114453Outer fold 17/17 | test 134075067
+
+Saved: Turbidity
+   Target             Model  Nodes  Rows       R2       RMSE
+Turbidity Gradient Boosting     17 90843 0.374863 445.616619
+              Target             Model  Nodes   Rows        R2       RMSE
+    DO concentration Gradient Boosting     17 114607  0.729058   0.923177
+Specific conductance Gradient Boosting     24 144980 -0.093931 463.985130
+           Turbidity Gradient Boosting     17  90843  0.374863 445.616619
+   Water temperature Gradient Boosting     24 144980  0.832617   2.900056
+                  pH Gradient Boosting     19 121011 -0.123230   0.251106
+Saved master metrics.
+Prediction rows: 616,421
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+              target             model          features  outer_folds
+    DO concentration Gradient Boosting        configured            9
+    DO concentration Gradient Boosting     K=1 | reduced            5
+    DO concentration Gradient Boosting     K=4 | reduced            2
+    DO concentration Gradient Boosting    configured + N            1
+Specific conductance Gradient Boosting K=1 | local_slope           10
+Specific conductance Gradient Boosting K=4 | local_slope            9
+Specific conductance Gradient Boosting        configured            3
+Specific conductance Gradient Boosting        K=4 | none            2
+           Turbidity Gradient Boosting    K=1 | none + N            8
+           Turbidity Gradient Boosting    K=4 | none + N            4
+           Turbidity Gradient Boosting    K=2 | none + N            3
+           Turbidity Gradient Boosting K=2 | reduced + N            1
+           Turbidity Gradient Boosting K=4 | local_slope            1
+   Water temperature Gradient Boosting     K=2 | reduced           10
+   Water temperature Gradient Boosting     K=4 | reduced            7
+   Water temperature Gradient Boosting        configured            4
+   Water temperature Gradient Boosting     K=1 | reduced            3
+                  pH Gradient Boosting    K=4 | none + N           12
+                  pH Gradient Boosting    configured + N            3
+                  pH Gradient Boosting     K=4 | reduced            2
+                  pH Gradient Boosting    K=2 | none + N            1
+                  pH Gradient Boosting K=4 | reduced + N            1
+Saved configs.
+
+R2 TABLE
+
+Model                 Gradient Boosting
+Target                                 
+DO concentration               0.729058
+Specific conductance          -0.093931
+Turbidity                      0.374863
+Water temperature              0.832617
+pH                            -0.123230
+
+RMSE TABLE
+
+Model                 Gradient Boosting
+Target                                 
+DO concentration               0.923177
+Specific conductance         463.985130
+Turbidity                    445.616619
+Water temperature              2.900056
+pH                             0.251106
+
+BEST CONVENTIONAL MODELS
+
+              Target             Model  Nodes   Rows        R2       RMSE
+    DO concentration Gradient Boosting     17 114607  0.729058   0.923177
+Specific conductance Gradient Boosting     24 144980 -0.093931 463.985130
+           Turbidity Gradient Boosting     17  90843  0.374863 445.616619
+   Water temperature Gradient Boosting     24 144980  0.832617   2.900056
+                  pH Gradient Boosting     19 121011 -0.123230   0.251106
+
+================================================================================
+Water temperature
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+{'learning_rate': 0.05, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 0.0}           22
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            1
+ {'learning_rate': 0.1, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            1
+
+================================================================================
+DO concentration
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+{'learning_rate': 0.05, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 0.0}           13
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 31, 'l2_regularization': 1.0}            4
+
+================================================================================
+Specific conductance
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 31, 'l2_regularization': 1.0}           23
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            1
+
+================================================================================
+pH
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}           14
+{'learning_rate': 0.05, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 0.0}            4
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 31, 'l2_regularization': 1.0}            1
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+ {'learning_rate': 0.1, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            7
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            4
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 31, 'l2_regularization': 1.0}            4
+{'learning_rate': 0.05, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 0.0}            2
+
+FINAL TABLE
+
+              Target             Model  Nodes   Rows        R2       RMSE
+    DO concentration Gradient Boosting     17 114607  0.729058   0.923177
+Specific conductance Gradient Boosting     24 144980 -0.093931 463.985130
+           Turbidity Gradient Boosting     17  90843  0.374863 445.616619
+   Water temperature Gradient Boosting     24 144980  0.832617   2.900056
+                  pH Gradient Boosting     19 121011 -0.123230   0.251106
+Finished.
