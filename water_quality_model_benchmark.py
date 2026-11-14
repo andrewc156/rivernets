@@ -102,6 +102,20 @@ HISTORY_DIR = os.environ.get("BENCHMARK_HISTORY", "")
 # would get the reference level; with a station split every period has several
 # training stations. Not combined with a held-out time period.
 YEAR_EFFECT = os.environ.get("BENCHMARK_YEAR_EFFECT", "")
+
+# Upstream rainfall (opt-in): BENCHMARK_RAIN=uncompressed or compressed adds
+# rain_1h, rain_6h, rain_24h, rain_72h, rain_168h (log(1 + mm) over the last 1,
+# 6, 24, 72 and 168 hours, all ending before the measurement hour) from
+# build_rain_features.py: hourly MRMS rainfall averaged over the river upstream
+# of each station, sampled at every node of the uncompressed graph or at the
+# compressed graph's nodes only. Every feature candidate is offered with and
+# without them ("... + R") and the inner loop chooses, as for discharge. Rainfall
+# is weather data, not water quality, so the held-out station's values never
+# enter; all rows are kept, so the default run is the paired baseline.
+RAIN = os.environ.get("BENCHMARK_RAIN", "")
+RAIN_COLS = ["rain_1h", "rain_6h", "rain_24h", "rain_72h", "rain_168h"]
+if RAIN not in ("", "uncompressed", "compressed"):
+    raise ValueError("BENCHMARK_RAIN must be '', 'uncompressed' or 'compressed'")
 if YEAR_EFFECT not in ("", "wy", "month"):
     raise ValueError("BENCHMARK_YEAR_EFFECT must be '', 'wy' or 'month'")
 NEIGHBOUR_K = 3
@@ -155,6 +169,8 @@ elif TIME_SPLIT:
     _default_results = "results/benchmark_results_time_split"
 elif DISCHARGE_MODE:
     _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
+elif RAIN:
+    _default_results = f"results/benchmark_results_rain_{RAIN}"
 elif NEIGHBOUR:
     _default_results = "results/benchmark_results_neighbour"
 elif HISTORY_DIR:
@@ -1376,6 +1392,23 @@ if NEIGHBOUR:
         }
 
 
+if RAIN:
+    _rain = pd.read_pickle(BENCHMARK_DIR / f"rain_features_{RAIN}.pkl")
+    for target, cfg in TARGET_CONFIGS.items():
+        df = cfg["df"].drop(columns=RAIN_COLS, errors="ignore")
+        merged = df.merge(_rain, on=["node", "time"], how="left")
+        merged.index = df.index
+        if merged[RAIN_COLS].isna().any().any():
+            raise ValueError(f"{target}: node-hours without rainfall features")
+        cfg["df"] = merged
+        cfg["candidates"] = {
+            **cfg["candidates"],
+            **{f"{name} + R": [*features, *RAIN_COLS]
+               for name, features in cfg["candidates"].items()}
+        }
+    print(f"Rainfall ({RAIN} graph): {len(RAIN_COLS)} features offered to every candidate")
+
+
 def period_indicators(time):
     """Indicator columns of the period of each row (BENCHMARK_YEAR_EFFECT)."""
     t = pd.to_datetime(time, utc=True)
@@ -2588,6 +2621,7 @@ benchmark_config = {
         "neighbour": f"on, K={NEIGHBOUR_K}" if NEIGHBOUR else "off",
         "history": HISTORY_DIR or "off",
         "year_effect": YEAR_EFFECT or "off",
+        "rain": RAIN or "off",
         "time_split": TIME_SPLIT or "off",
         "split": SPLIT,
         "split_repeats": SPLIT_REPEATS,
