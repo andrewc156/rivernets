@@ -1,0 +1,334 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black}
+\setlist{itemsep=2pt, topsep=4pt}
+\usepackage{microtype}
+\setlength{\emergencystretch}{3em}
+\newcommand{\codeus}{\textunderscore\allowbreak}
+\newcommand{\code}[1]{{\ttfamily\let\_\codeus #1}}
+
+\title{Follow-up Runs of the Water-Quality Benchmark\\
+       on the Colorado River Network}
+\author{Andrew Chincea \\ TDA Lab}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report continues \code{kron\_vs\_full\_laplacian\_report.pdf} (the ``main report'') and collects
+the benchmark runs made after it. Every run is a paired comparison against the leave-one-station-out
+(LOO) benchmark of the main report (its Table~\ref{tab:base} values are repeated here), on identical
+test rows. So far it covers three runs. (1) Water-year indicators on the current rows change no
+target reliably except turbidity, where every linear model gains about $0.06$ and the graph model
+$0.08$; pH gets worse for Elastic Net and the Spline GAM. (2) With the longer 2021--2026 history,
+the water-year indicators remove the $1$\,\textdegree C cold offset found in the main report, but
+the history still does not beat the current rows for any target: the records cover different years
+at different stations, and for the linear models the indicators then also absorb which stations are
+present, so specific conductance and pH get much worse. (3) Gradient boosting chooses the
+neighbour reading for pH and turbidity only, and gains nothing reliable.
+\end{abstract}
+
+% =====================================================================
+\section{Setup}
+
+The data, graph, models, nested LOO and $R^2$ (equal weight per station) are those of the main
+report. Each run below changes one option of \code{water\_quality\_model\_benchmark.py} and is compared
+with the same model of the main benchmark on identical test rows with \code{compare\_runs.py}:
+$\Delta R^2$ is the change, the 95\% interval resamples stations with the predictions held fixed, and
+better/worse counts the stations whose mean squared error fell/rose. Intervals that exclude zero are
+in bold. With 17--24 stations, differences below about $0.03$--$0.05$ are within noise.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Reference: LOO $R^2$ of the main benchmark (main report, Table~14), which every run below is
+paired against.}
+\label{tab:base}
+\begin{tabular}{l rrrrr}
+\toprule
+Model & Water temp. & DO & Spec.\ cond. & pH & Turbidity \\
+\midrule
+Graph-Laplacian   & $0.863$ & $0.700$ & $0.385$ & $0.117$ & $0.104$ \\
+OLS               & $0.863$ & $0.695$ & $-0.099$ & $-0.014$ & $0.136$ \\
+Ridge             & $0.864$ & $0.701$ & $-0.110$ & $0.003$ & $0.136$ \\
+Elastic Net       & $0.863$ & $0.705$ & $-0.109$ & $0.023$ & $0.136$ \\
+Spline GAM        & $0.838$ & $0.708$ & $0.022$ & $0.012$ & $0.091$ \\
+Gradient Boosting & $0.833$ & $0.733$ & $-0.094$ & $-0.171$ & $0.391$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Water-year effect}\label{sec:wy}
+
+\paragraph{Motivation.} In the main report (Section~15), training on the longer 2021--2026 record
+made every model predict water temperature about $1$\,\textdegree C too cold: with no term for the
+year, the models learned the multi-year level, while 85\% of the test rows are from 2025--26 and
+water year 2026 was $1.2$\,\textdegree C warmer than usual.
+
+\paragraph{Option.} \code{BENCHMARK\_YEAR\_EFFECT=wy} adds indicator columns for water years
+2022--2026 (October--September; WY2021 is the reference, and the few hours after September 2026 count
+as WY2026) to every feature candidate of every model, so the inner loop cannot drop them. Their
+coefficients are estimated from the training stations, which are observed in the same years as the
+held-out station, so the held-out station's values never enter. Two runs were made with the five
+fast models and the graph model: on the current rows (a control, to separate the effect of the
+indicators from that of the extra data) and with the longer history.
+
+% ---------------------------------------------------------------------
+\subsection{On the current rows}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Water-year indicators on the current rows: paired $\Delta R^2$ against the main benchmark.}
+\label{tab:wy}
+\begin{tabular}{ll rrrcc}
+\toprule
+Target & Model & Without & With & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.863$ & $0.859$ & $-0.005$ & ($-0.03$, $0.01$) & 12/12 \\
+              & OLS             & $0.863$ & $0.862$ & $-0.001$ & ($-0.02$, $0.01$) & 14/10 \\
+              & Ridge           & $0.864$ & $0.863$ & $-0.001$ & ($-0.02$, $0.01$) & 13/11 \\
+              & Elastic Net     & $0.863$ & $0.866$ & $+0.002$ & ($-0.02$, $0.02$) & 15/9 \\
+              & Spline GAM      & $0.838$ & $0.820$ & $\mathbf{-0.018}$ & ($-0.03$, $-0.00$) & 7/17 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $0.694$ & $-0.005$ & ($-0.03$, $0.02$) & 6/11 \\
+              & OLS             & $0.695$ & $0.689$ & $-0.006$ & ($-0.03$, $0.02$) & 9/8 \\
+              & Ridge           & $0.701$ & $0.701$ & $+0.000$ & ($-0.02$, $0.03$) & 8/9 \\
+              & Elastic Net     & $0.705$ & $0.702$ & $-0.003$ & ($-0.02$, $0.01$) & 8/9 \\
+              & Spline GAM      & $0.708$ & $0.695$ & $\mathbf{-0.013}$ & ($-0.03$, $-0.00$) & 5/12 \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $0.393$ & $+0.009$ & ($-0.08$, $0.15$) & 12/12 \\
+              & OLS             & $-0.099$ & $-0.025$ & $+0.074$ & ($-0.14$, $0.30$) & 10/14 \\
+              & Ridge           & $-0.110$ & $-0.073$ & $+0.037$ & ($-0.13$, $0.16$) & 11/13 \\
+              & Elastic Net     & $-0.109$ & $-0.070$ & $+0.039$ & ($-0.12$, $0.16$) & 11/13 \\
+              & Spline GAM      & $0.022$ & $-0.037$ & $-0.059$ & ($-0.26$, $0.03$) & 9/15 \\
+\addlinespace
+pH            & Graph-Laplacian & $0.117$ & $0.132$ & $+0.015$ & ($-0.00$, $0.04$) & 10/9 \\
+              & OLS             & $-0.014$ & $-0.054$ & $-0.040$ & ($-0.09$, $0.01$) & 8/11 \\
+              & Ridge           & $0.003$ & $-0.003$ & $-0.006$ & ($-0.04$, $0.04$) & 8/11 \\
+              & Elastic Net     & $0.023$ & $-0.058$ & $\mathbf{-0.081}$ & ($-0.12$, $-0.05$) & 4/15 \\
+              & Spline GAM      & $0.012$ & $-0.066$ & $\mathbf{-0.078}$ & ($-0.15$, $-0.02$) & 6/13 \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.104$ & $0.186$ & $+0.081$ & ($-0.04$, $0.47$) & 12/5 \\
+              & OLS             & $0.136$ & $0.194$ & $\mathbf{+0.058}$ & ($0.01$, $0.22$) & 13/4 \\
+              & Ridge           & $0.136$ & $0.196$ & $\mathbf{+0.060}$ & ($0.01$, $0.22$) & 13/4 \\
+              & Elastic Net     & $0.136$ & $0.193$ & $\mathbf{+0.056}$ & ($0.01$, $0.20$) & 13/4 \\
+              & Spline GAM      & $0.091$ & $0.135$ & $+0.044$ & ($-0.06$, $0.14$) & 12/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Water temperature, DO and specific conductance do not change} beyond noise for the
+        graph and linear models. On the current rows the training and test stations cover the same
+        months, so there is little common offset to remove (mean signed station bias $-0.05$ before,
+        $+0.05$ to $+0.09$\,\textdegree C after). The Spline GAM loses a little on water temperature
+        and DO.
+  \item \textbf{Turbidity improves for every model}: the three linear models gain about $0.06$ with
+        intervals above zero (13 of 17 stations better), and the graph model gains $0.08$
+        ($0.104\to0.186$, interval crossing zero). Turbidity depends on runoff, which differs a lot
+        from year to year, so a year level shared across stations is plausible. The best turbidity
+        model is still gradient boosting ($0.391$), which was not part of this run.
+  \item \textbf{pH gets worse} for Elastic Net and the Spline GAM ($-0.08$, intervals below zero)
+        and does not change for the graph model ($+0.015$).
+  \item The indicators were fixed in advance (water years, no tuning), so these are fair results.
+        Because they help only turbidity, the option stays off by default.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\subsection{With the longer history}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Water-year indicators with the 2021--2026 history: LOO $R^2$ of the main benchmark (Base),
+the history run of the main report (History) and the history run with water-year indicators
+(History + WY). $\Delta$: History + WY against History, with the paired 95\% interval.}
+\label{tab:histwy}
+\begin{tabular}{ll rrr rc}
+\toprule
+Target & Model & Base & History & History + WY & $\Delta$ & Interval \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.863$ & $0.816$ & $0.813$ & $-0.002$ & ($-0.04$, $0.03$) \\
+              & OLS             & $0.863$ & $0.840$ & $0.856$ & $+0.016$ & ($-0.01$, $0.04$) \\
+              & Ridge           & $0.864$ & $0.840$ & $0.850$ & $+0.009$ & ($-0.02$, $0.03$) \\
+              & Elastic Net     & $0.863$ & $0.841$ & $0.851$ & $+0.010$ & ($-0.01$, $0.03$) \\
+              & Spline GAM      & $0.838$ & $0.745$ & $0.757$ & $+0.012$ & ($-0.05$, $0.08$) \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $0.699$ & $0.706$ & $+0.007$ & ($-0.02$, $0.04$) \\
+              & OLS             & $0.695$ & $0.702$ & $0.694$ & $-0.008$ & ($-0.03$, $0.01$) \\
+              & Ridge           & $0.701$ & $0.708$ & $0.698$ & $-0.010$ & ($-0.03$, $0.01$) \\
+              & Elastic Net     & $0.705$ & $0.712$ & $0.708$ & $-0.004$ & ($-0.02$, $0.01$) \\
+              & Spline GAM      & $0.708$ & $0.719$ & $0.715$ & $-0.004$ & ($-0.03$, $0.01$) \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $0.334$ & $0.322$ & $-0.013$ & ($-0.15$, $0.04$) \\
+              & OLS             & $-0.099$ & $-0.022$ & $-0.727$ & $-0.706$ & ($-4.08$, $0.08$) \\
+              & Ridge           & $-0.110$ & $-0.032$ & $-0.227$ & $-0.195$ & ($-1.29$, $0.08$) \\
+              & Elastic Net     & $-0.109$ & $-0.039$ & $-0.124$ & $-0.085$ & ($-0.67$, $0.07$) \\
+              & Spline GAM      & $0.022$ & $0.055$ & $0.066$ & $+0.011$ & ($-0.12$, $0.06$) \\
+\addlinespace
+pH            & Graph-Laplacian & $0.117$ & $-0.037$ & $-0.051$ & $-0.013$ & ($-0.08$, $0.04$) \\
+              & OLS             & $-0.014$ & $-0.011$ & $-0.273$ & $\mathbf{-0.262}$ & ($-0.66$, $-0.03$) \\
+              & Ridge           & $0.003$ & $0.013$ & $-0.173$ & $\mathbf{-0.186}$ & ($-0.51$, $-0.02$) \\
+              & Elastic Net     & $0.023$ & $0.029$ & $0.006$ & $-0.023$ & ($-0.08$, $0.00$) \\
+              & Spline GAM      & $0.012$ & $0.009$ & $0.006$ & $-0.003$ & ($-0.03$, $0.03$) \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.104$ & $0.043$ & $0.095$ & $\mathbf{+0.052}$ & ($0.02$, $0.13$) \\
+              & OLS             & $0.136$ & $0.032$ & $0.100$ & $\mathbf{+0.068}$ & ($0.01$, $0.12$) \\
+              & Ridge           & $0.136$ & $0.031$ & $0.095$ & $+0.064$ & ($-0.00$, $0.10$) \\
+              & Elastic Net     & $0.136$ & $0.033$ & $0.099$ & $+0.067$ & ($-0.01$, $0.10$) \\
+              & Spline GAM      & $0.091$ & $0.085$ & $0.128$ & $+0.043$ & ($-0.01$, $0.09$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Water temperature: decomposition of the station-level error. Signed bias: mean over
+stations of the station-mean error (\textdegree C; without 09429490). Bias$^2$: mean squared
+station-mean error. Within: mean variance of the error about its station mean. $R^2$ without
+09429490 in the last column.}
+\label{tab:wtdecomp}
+\begin{tabular}{ll rrrr}
+\toprule
+Model & Run & Signed bias & Bias$^2$ & Within & $R^2$ excl. \\
+\midrule
+Graph-Laplacian & Base         & $-0.05$ & $0.90$ & $5.96$ & $0.855$ \\
+                & History      & $-0.92$ & $3.25$ & $6.01$ & $0.833$ \\
+                & History + WY & $+0.04$ & $3.09$ & $6.28$ & $0.840$ \\
+\addlinespace
+Ridge           & Base         & $-0.05$ & $0.88$ & $5.95$ & $0.856$ \\
+                & History      & $-0.98$ & $2.01$ & $6.02$ & $0.831$ \\
+                & History + WY & $+0.01$ & $1.27$ & $6.29$ & $0.841$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{The cold offset is gone} (Table~\ref{tab:wtdecomp}): the mean signed station bias
+        of water temperature goes from about $-0.95$ to $+0.01$--$+0.04$\,\textdegree C, and the
+        linear models gain about $0.01$ ($0.840\to0.850$--$0.856$).
+  \item \textbf{But the history still does not beat the current rows.} Water temperature stays
+        $0.01$--$0.05$ below the main benchmark for every model, and the graph model does not
+        change at all ($0.816\to0.813$). Two things remain after the offset is removed: the station
+        biases are still more spread out than in the main benchmark (bias$^2$ $1.27$ against
+        $0.88$ for Ridge; for the graph model most of the $3.09$ is the 09429490 fold, whose bias is
+        still about $-6$\,\textdegree C), and the within-station error is larger ($5.96\to6.28$).
+        The seasonal coefficients fitted over six years describe the 2025--26 test period less
+        well than those fitted on the same period.
+  \item \textbf{Specific conductance and pH get much worse for OLS and Ridge.} OLS falls to $-0.73$
+        for specific conductance and $-0.27$ for pH, Ridge to $-0.23$ and $-0.17$ (pH intervals
+        below zero). The specific-conductance loss comes from a few stations, mostly 09510000 (Verde
+        below Bartlett, predicted $1{,}100$--$1{,}900$\,\textmu S/cm too high) and the
+        high-conductance station 96751415 (about $1{,}150$\,\textmu S/cm too low). The graph model and the Spline GAM barely change.
+  \item \textbf{Likely cause: the records cover different years at different stations.} In the
+        history tables, some stations report only in the last one or two water years (09510000 from
+        WY2024, 92116891 from WY2025, 75465016 only in WY2026) and others only in the first ones
+        (133114453 and 134075067 stop in WY2022 for specific conductance;
+        \code{results/history\_coverage\_by\_wy.csv}). The linear models have no term for each
+        station, so a water-year coefficient also absorbs which stations report in that year, and
+        that mix changes with every held-out station. For specific conductance, whose level differs
+        by a factor of five between stations, this swamps the year effect. The graph model has a
+        level $g_i$ for every station, so its year coefficients are estimated within stations,
+        which is why it is unaffected. This explanation was not tested separately.
+  \item \textbf{Turbidity improves against the history run} ($+0.04$ to $+0.07$, intervals above
+        zero for the graph model and OLS), consistent with the current-row run, but stays at or
+        below the main benchmark.
+  \item \textbf{Conclusion.} With the year effect, the longer history no longer biases water
+        temperature, but it still does not improve any target over the main benchmark, and with
+        the uneven coverage it makes the linear models unstable. A fair use of the history would
+        need the year effect estimated within stations (station-level offsets for every model, as
+        the graph model has), or training restricted to stations that report in every year. Neither
+        is run yet. The history option stays off by default.
+\end{itemize}
+
+% =====================================================================
+\section{Gradient boosting with the neighbour reading}\label{sec:nbrgb}
+
+The neighbour reading of the main report (Section~14: the mean same-hour anomaly of the target at
+the three nearest training stations) was run for gradient boosting, which was missing from that
+section. As before, every feature candidate is offered with and without it and the inner loop
+chooses.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Gradient boosting with the neighbour reading: paired $\Delta R^2$ against gradient boosting
+in the main benchmark. Folds: outer folds in which the inner loop chose a candidate with the reading.}
+\label{tab:nbrgb}
+\begin{tabular}{l rrrcc c}
+\toprule
+Target & Without & With & $\Delta R^2$ & Interval & Better/worse & Folds \\
+\midrule
+Water temp.  & $0.833$ & $0.833$ & $0.000$ & -- & 0/0 & 0/24 \\
+DO           & $0.733$ & $0.729$ & $-0.004$ & ($-0.01$, $0.00$) & 0/1 & 1/17 \\
+Spec.\ cond. & $-0.094$ & $-0.094$ & $0.000$ & -- & 0/0 & 0/24 \\
+pH           & $-0.171$ & $-0.123$ & $+0.048$ & ($-0.04$, $0.17$) & 11/6 & 17/19 \\
+Turbidity    & $0.391$ & $0.375$ & $-0.016$ & ($-0.10$, $0.01$) & 8/8 & 16/17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Gradient boosting uses the reading only for pH and turbidity}, and never for water
+        temperature or specific conductance, unlike the linear models, which chose it in every fold
+        for every target but turbidity.
+  \item \textbf{pH improves by $0.05$, but stays below zero} ($-0.123$) and the interval crosses
+        zero. The linear models gained $0.12$--$0.14$ from the same reading and the graph model
+        reached $0.178$, so the reading does not make gradient boosting competitive for pH.
+  \item \textbf{Turbidity is unchanged} ($-0.016$, within noise), so gradient boosting without the
+        reading ($0.391$) remains the best turbidity model.
+\end{itemize}
+
+% =====================================================================
+\section{Conclusions so far}
+
+\begin{enumerate}
+  \item \textbf{A water-year effect helps turbidity only.} On the current rows it adds about $0.06$
+        to every linear model (intervals above zero) and $0.08$ to the graph model, changes nothing
+        for water temperature, DO and specific conductance, and lowers pH for Elastic Net and the
+        Spline GAM.
+  \item \textbf{The longer history is still not useful.} The year effect removes its
+        $1$\,\textdegree C water-temperature offset, but no target beats the main benchmark, and
+        because the stations' records cover different years the linear models become unstable for
+        specific conductance and pH. The graph model, which has a level for every station, is
+        unaffected by that problem but gains nothing either.
+  \item \textbf{The neighbour reading does not help gradient boosting} for any target beyond noise.
+        Gradient boosting stays the best turbidity model without it.
+  \item The main benchmark (Table~\ref{tab:base}) remains the reference.
+\end{enumerate}
+
+\paragraph{Next steps (proposed, not run).} Turbidity with water-year indicators for gradient
+boosting and the Graph + GB hybrid; the history with station-level offsets for the linear models or
+restricted to stations that report in every year; clipping turbidity at the sensor maximum
+(3{,}800--4{,}000\,FNU in the added years); a dam-tailwater indicator for the Lower Colorado.
+
+\paragraph{Reproducibility.} The runs come from \code{water\_quality\_model\_benchmark.py} at commit
+\code{9f26e65} on the lab server, with
+\code{BENCHMARK\_MODELS=Dummy,OLS,Ridge,Elastic Net,Spline GAM,Graph-Laplacian} and
+\code{BENCHMARK\_YEAR\_EFFECT=wy}, without and with \code{BENCHMARK\_HISTORY=data/benchmark\_data\_history},
+saved in \code{results/benchmark\_results\_wy/} and \code{results/benchmark\_results\_history\_wy/}, and
+with \code{BENCHMARK\_MODELS=Gradient Boosting} and \code{BENCHMARK\_NEIGHBOUR=on}, saved in
+\code{results/benchmark\_results\_neighbour\_gb/}. The server logs are \code{wy.log},
+\code{hist\_wy.log} and \code{nbr\_gb.log}. The paired comparisons come from \code{compare\_runs.py} against
+\code{results/benchmark\_results\_inner\_fs\_graph/} (graph model),
+\code{results/benchmark\_results\_inner\_fs/} (other models) and the history run of the main report.
+They are saved as \code{results/wy\_vs\_base\_*.csv}, \code{results/history\_wy\_vs\_base\_*.csv},
+\code{results/history\_wy\_vs\_history\_*.csv} and
+\code{results/neighbour\_vs\_base\_gradient\_boosting.csv}.
+The error decomposition and the coverage table come from \code{year\_effect\_analysis.py} (seconds),
+saved in \code{results/year\_effect\_diagnostics.csv} and \code{results/history\_coverage\_by\_wy.csv}.
+
+\end{document}
