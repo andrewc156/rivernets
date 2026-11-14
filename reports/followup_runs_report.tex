@@ -28,14 +28,17 @@
 This report continues \code{kron\_vs\_full\_laplacian\_report.pdf} (the ``main report'') and collects
 the benchmark runs made after it. Every run is a paired comparison against the leave-one-station-out
 (LOO) benchmark of the main report (its Table~\ref{tab:base} values are repeated here), on identical
-test rows. So far it covers three runs. (1) Water-year indicators on the current rows change no
+test rows. So far it covers four runs. (1) Water-year indicators on the current rows change no
 target reliably except turbidity, where every linear model gains about $0.06$ and the graph model
 $0.08$; pH gets worse for Elastic Net and the Spline GAM. (2) With the longer 2021--2026 history,
 the water-year indicators remove the $1$\,\textdegree C cold offset found in the main report, but
 the history still does not beat the current rows for any target: the records cover different years
 at different stations, and for the linear models the indicators then also absorb which stations are
 present, so specific conductance and pH get much worse. (3) Gradient boosting chooses the
-neighbour reading for pH and turbidity only, and gains nothing reliable.
+neighbour reading for pH and turbidity only, and gains nothing reliable. (4) Hourly upstream rainfall
+from NOAA MRMS radar is chosen by the inner loop in almost every fold but adds at most about $0.01$
+(DO, graph and two linear models) and does not help turbidity; rain sampled at the 67 nodes of the
+compressed graph does as well as rain along the whole upstream river.
 \end{abstract}
 
 % =====================================================================
@@ -293,6 +296,109 @@ Turbidity    & $0.391$ & $0.375$ & $-0.016$ & ($-0.10$, $0.01$) & 8/8 & 16/17 \\
 \end{itemize}
 
 % =====================================================================
+\section{Upstream rainfall}\label{sec:rain}
+
+\paragraph{Data.} Hourly NOAA MRMS radar--gauge precipitation (MultiSensor QPE, 1-hour, Pass~2;
+public on AWS, $0.01^\circ$ grid, from October 2020), downloaded by \code{download\_mrms.py} for
+every station's benchmark window at the $7{,}259$ grid cells that contain a node of the uncompressed
+river graph. 83 hours are missing from the archive, none in the main 2025--26 window. Radar
+undercounts snow in the mountains, so winter precipitation in the headwaters is low.
+
+\paragraph{Features.} For each station and hour, \code{build\_rain\_features.py} averages the rain
+over the river upstream of the station (its ancestors on the directed graph, plus the station)
+and sums it over the last $1$, $6$, $24$, $72$ and $168$ hours, as $\log(1+\text{mm})$. Every
+window ends before the hour of the reading, so no later rain is used. The windows were fixed in
+advance. Two ways of sampling the upstream rain were compared:
+\begin{description}[leftmargin=1.5em]
+  \item[uncompressed] every node of the 90\,m river graph (median 187 grid cells per station), so the
+        mean weights each cell by the length of upstream channel in it;
+  \item[compressed] only the 67 nodes of the compressed graph (stations, gauges, confluences and
+        channel ends; median 6 cells per station).
+\end{description}
+The two schemes correlate at $0.90$--$0.97$. Within a station, \code{rain\_72h} correlates $0.35$
+with turbidity and about $0.01$ with specific conductance.
+
+\paragraph{Option.} \code{BENCHMARK\_RAIN=uncompressed|compressed} offers every feature candidate
+with and without the five rain columns, and the inner loop chooses, as for the neighbour reading.
+Both runs used the five fast models and the graph model; gradient boosting and random forest were
+not part of these runs.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Upstream rainfall: paired $\Delta R^2$ against the main benchmark, for rain sampled on the
+uncompressed and on the compressed graph. Folds: outer folds whose chosen candidate included rain
+(uncompressed/compressed).}
+\label{tab:rain}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ll r rc rc c}
+\toprule
+ & & & \multicolumn{2}{c}{Uncompressed} & \multicolumn{2}{c}{Compressed} & \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Target & Model & Base & $\Delta R^2$ & Interval & $\Delta R^2$ & Interval & Folds \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.863$ & $0.000$ & ($-0.00$, $0.00$) & $+0.001$ & ($-0.00$, $0.00$) & 24/24 of 24 \\
+              & OLS             & $0.863$ & $+0.001$ & ($-0.00$, $0.00$) & $+0.001$ & ($-0.00$, $0.00$) & 24/24 of 24 \\
+              & Ridge           & $0.864$ & $+0.001$ & ($-0.00$, $0.00$) & $+0.001$ & ($-0.00$, $0.00$) & 24/23 of 24 \\
+              & Elastic Net     & $0.863$ & $0.000$ & ($-0.00$, $0.00$) & $0.000$ & ($-0.00$, $0.00$) & 21/20 of 24 \\
+              & Spline GAM      & $0.838$ & $+0.005$ & ($-0.00$, $0.02$) & $+0.005$ & ($-0.00$, $0.02$) & 24/24 of 24 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.700$ & $\mathbf{+0.012}$ & ($0.00$, $0.02$) & $\mathbf{+0.014}$ & ($0.01$, $0.03$) & 17/17 of 17 \\
+              & OLS             & $0.695$ & $+0.004$ & ($-0.01$, $0.01$) & $+0.007$ & ($-0.00$, $0.01$) & 17/17 of 17 \\
+              & Ridge           & $0.701$ & $+0.001$ & ($-0.01$, $0.01$) & $\mathbf{+0.011}$ & ($0.00$, $0.02$) & 17/17 of 17 \\
+              & Elastic Net     & $0.705$ & $0.000$ & ($-0.01$, $0.01$) & $\mathbf{+0.007}$ & ($0.00$, $0.01$) & 17/17 of 17 \\
+              & Spline GAM      & $0.708$ & $-0.004$ & ($-0.01$, $0.00$) & $+0.001$ & ($-0.00$, $0.01$) & 8/17 of 17 \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.385$ & $+0.003$ & ($-0.00$, $0.01$) & $+0.002$ & ($-0.00$, $0.01$) & 24/24 of 24 \\
+              & OLS             & $-0.099$ & $+0.022$ & ($-0.03$, $0.11$) & $+0.014$ & ($-0.02$, $0.09$) & 24/24 of 24 \\
+              & Ridge           & $-0.110$ & $+0.012$ & ($-0.05$, $0.09$) & $-0.004$ & ($-0.05$, $0.06$) & 24/24 of 24 \\
+              & Elastic Net     & $-0.109$ & $+0.013$ & ($-0.04$, $0.09$) & $+0.006$ & ($-0.02$, $0.07$) & 24/24 of 24 \\
+              & Spline GAM      & $0.022$ & $-0.010$ & ($-0.06$, $0.01$) & $-0.006$ & ($-0.03$, $0.01$) & 19/4 of 24 \\
+\addlinespace
+pH            & Graph-Laplacian & $0.117$ & $-0.033$ & ($-0.16$, $0.02$) & $-0.030$ & ($-0.16$, $0.02$) & 19/19 of 19 \\
+              & OLS             & $-0.014$ & $+0.003$ & ($-0.03$, $0.03$) & $+0.005$ & ($-0.02$, $0.03$) & 19/19 of 19 \\
+              & Ridge           & $0.003$ & $+0.012$ & ($-0.01$, $0.03$) & $+0.012$ & ($-0.01$, $0.03$) & 19/19 of 19 \\
+              & Elastic Net     & $0.023$ & $0.000$ & -- & $0.000$ & -- & 0/0 of 19 \\
+              & Spline GAM      & $0.012$ & $+0.015$ & ($-0.03$, $0.06$) & $+0.011$ & ($-0.03$, $0.05$) & 18/18 of 19 \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.104$ & $-0.011$ & ($-0.10$, $0.02$) & $-0.011$ & ($-0.10$, $0.02$) & 15/16 of 17 \\
+              & OLS             & $0.136$ & $0.000$ & -- & $-0.002$ & ($-0.02$, $0.00$) & 0/1 of 17 \\
+              & Ridge           & $0.136$ & $0.000$ & -- & $-0.002$ & ($-0.02$, $0.00$) & 0/1 of 17 \\
+              & Elastic Net     & $0.136$ & $0.000$ & -- & $-0.002$ & ($-0.02$, $0.00$) & 0/1 of 17 \\
+              & Spline GAM      & $0.091$ & $0.000$ & ($-0.02$, $0.02$) & $-0.004$ & ($-0.04$, $0.01$) & 15/15 of 17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{The inner loop chooses rain almost everywhere, but it changes little.} For water
+        temperature, DO, specific conductance and pH, nearly every outer fold of every model picks a
+        candidate with rain, yet all changes are below $0.025$. The only intervals above zero are for
+        DO: the graph model gains $0.012$--$0.014$ with both schemes (11--12 of 17 stations better),
+        and Ridge and Elastic Net gain $0.011$ and $0.007$ with the compressed scheme. These are
+        small.
+  \item \textbf{Turbidity does not improve}, although it is the target most related to rain within
+        a station. The linear models never choose rain under the uncompressed scheme (once under
+        the compressed one). The graph model and the Spline GAM do choose it, but the graph model
+        loses $0.01$ and the Spline GAM gains nothing. Turbidity $R^2$ is dominated by a few stations with very large and
+        variable readings: the graph model's loss comes mostly from 09365000 (San Juan River at
+        Farmington), whose mean bias grows from $618$ to $691$\,FNU. A possible reason is that sediment jumps after storms above some threshold, which a linear
+        term in log rain may not capture;
+        gradient boosting, the best turbidity model ($0.391$), was not run with rain.
+  \item \textbf{The graph model's pH loss ($-0.03$) comes from one station}, 09429490 above
+        Imperial Dam, the outlying fold of the main report, whose mean bias moves from $-0.08$ to
+        $-0.23$. Of the other 18 stations, 15 (uncompressed) and 16 (compressed) are better; without
+        09429490 the graph model's pH $R^2$ rises from $0.123$ to $0.135$ (uncompressed) and $0.139$
+        (compressed).
+  \item \textbf{Uncompressed and compressed rain give the same results.} Paired directly, no
+        difference exceeds $0.016$ for any model or target. The only intervals above zero favour the
+        compressed scheme for DO (Elastic Net $+0.007$, Spline GAM $+0.005$; Ridge $+0.010$ and the
+        graph model $+0.002$ with intervals touching zero). Rain at the 67 nodes of the compressed graph
+        carries as much information as rain along every 90\,m cell upstream.
+\end{itemize}
+
+% =====================================================================
 \section{Conclusions so far}
 
 \begin{enumerate}
@@ -307,11 +413,16 @@ Turbidity    & $0.391$ & $0.375$ & $-0.016$ & ($-0.10$, $0.01$) & 8/8 & 16/17 \\
         unaffected by that problem but gains nothing either.
   \item \textbf{The neighbour reading does not help gradient boosting} for any target beyond noise.
         Gradient boosting stays the best turbidity model without it.
+  \item \textbf{Upstream rainfall adds little.} It is chosen in nearly every fold, but the only
+        reliable gains are about $0.01$ for DO; turbidity, the target that rain should help most, does
+        not improve for the graph or linear models. Sampling rain at the compressed graph's 67 nodes
+        is as good as sampling it along every upstream cell.
   \item The main benchmark (Table~\ref{tab:base}) remains the reference.
 \end{enumerate}
 
-\paragraph{Next steps (proposed, not run).} Turbidity with water-year indicators for gradient
-boosting and the Graph + GB hybrid; the history with station-level offsets for the linear models or
+\paragraph{Next steps (proposed, not run).} Turbidity with water-year indicators or upstream rain
+for gradient boosting and the Graph + GB hybrid (rain enters turbidity through thresholds that a
+tree model can represent); the history with station-level offsets for the linear models or
 restricted to stations that report in every year; clipping turbidity at the sensor maximum
 (3{,}800--4{,}000\,FNU in the added years); a dam-tailwater indicator for the Lower Colorado.
 
@@ -328,6 +439,14 @@ with \code{BENCHMARK\_MODELS=Gradient Boosting} and \code{BENCHMARK\_NEIGHBOUR=o
 They are saved as \code{results/wy\_vs\_base\_*.csv}, \code{results/history\_wy\_vs\_base\_*.csv},
 \code{results/history\_wy\_vs\_history\_*.csv} and
 \code{results/neighbour\_vs\_base\_gradient\_boosting.csv}.
+The rainfall runs use \code{BENCHMARK\_RAIN=uncompressed|compressed} at commit \code{b2230e5}
+(one process per target, \code{run\_rain\_parallel.sh}, merged by \code{merge\_target\_parts.py}),
+with the same six models, saved in \code{results/benchmark\_results\_rain\_uncompressed/} and
+\code{results/benchmark\_results\_rain\_compressed/}; the rain comes from \code{download\_mrms.py}
+(\code{data/rain/mrms/}) and \code{build\_rain\_features.py}
+(\code{data/benchmark\_data/rain\_features\_*.pkl}). Their comparisons are
+\code{results/rain\_uncompressed\_vs\_base\_*.csv}, \code{results/rain\_compressed\_vs\_base\_*.csv} and
+\code{results/rain\_compressed\_vs\_uncompressed\_*.csv}.
 The error decomposition and the coverage table come from \code{year\_effect\_analysis.py} (seconds),
 saved in \code{results/year\_effect\_diagnostics.csv} and \code{results/history\_coverage\_by\_wy.csv}.
 
