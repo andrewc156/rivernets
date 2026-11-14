@@ -1,0 +1,488 @@
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/results/benchmark_results_history_wy
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (1088047, 33)
+fourier_interaction_df: (1088047, 44)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (1088047, 48)
+Year effect (wy) Water temperature: 5 indicators, reference WY2021
+Year effect (wy) DO concentration: 5 indicators, reference WY2021
+Year effect (wy) Specific conductance: 5 indicators, reference WY2021
+Year effect (wy) pH: 5 indicators, reference WY2021
+Year effect (wy) Turbidity: 5 indicators, reference WY2021
+Water temperature OK | feature candidates: 10 | predictors in union: 41
+DO concentration OK | feature candidates: 9 | predictors in union: 26
+Specific conductance OK | feature candidates: 10 | predictors in union: 25
+pH OK | feature candidates: 9 | predictors in union: 25
+Turbidity OK | feature candidates: 9 | predictors in union: 24
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Water temperature', 'DO concentration', 'Specific conductance', 'pH', 'Turbidity']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: Water temperature
+================================================================================
+History: 744,501 added rows, 0 training-only stations
+
+Target: Water temperature
+Nodes: 24
+Rows: 889,481
+Feature candidates: 10
+Outer fold 1/24 | test 47787846Outer fold 2/24 | test 58738608Outer fold 3/24 | test 67739434Outer fold 4/24 | test 75465016Outer fold 5/24 | test 81497938Outer fold 6/24 | test 82982643Outer fold 7/24 | test 83027786Outer fold 8/24 | test 83222751Outer fold 9/24 | test 84197086Outer fold 10/24 | test 88786999Outer fold 11/24 | test 90706215Outer fold 12/24 | test 92116891Outer fold 13/24 | test 93300040Outer fold 14/24 | test 93392084Outer fold 15/24 | test 96496279Outer fold 16/24 | test 96751415Outer fold 17/24 | test 97532807Outer fold 18/24 | test 110911305Outer fold 19/24 | test 126377584Outer fold 20/24 | test 131520862Outer fold 21/24 | test 133114453Outer fold 22/24 | test 134075067Outer fold 23/24 | test 186559442Outer fold 24/24 | test 203177183
+
+Saved: Water temperature
+           Target           Model  Nodes   Rows        R2     RMSE
+Water temperature             OLS     24 144980  0.855547 2.694101
+Water temperature     Elastic Net     24 144980  0.850536 2.740437
+Water temperature           Ridge     24 144980  0.849567 2.749304
+Water temperature Graph-Laplacian     24 144980  0.813397 3.062035
+Water temperature      Spline GAM     24 144980  0.757132 3.493306
+Water temperature           Dummy     24 144980 -0.019502 7.157236
+
+================================================================================
+STARTING: DO concentration
+================================================================================
+History: 499,815 added rows, 0 training-only stations
+
+Target: DO concentration
+Nodes: 17
+Rows: 614,422
+Feature candidates: 9
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 92116891Outer fold 10/17 | test 93300040Outer fold 11/17 | test 93392084Outer fold 12/17 | test 96496279Outer fold 13/17 | test 97532807Outer fold 14/17 | test 126377584Outer fold 15/17 | test 131520862Outer fold 16/17 | test 186559442Outer fold 17/17 | test 203177183
+
+Saved: DO concentration
+          Target           Model  Nodes   Rows        R2     RMSE
+DO concentration      Spline GAM     17 114607  0.714915 0.946965
+DO concentration     Elastic Net     17 114607  0.708114 0.958195
+DO concentration Graph-Laplacian     17 114607  0.705917 0.961795
+DO concentration           Ridge     17 114607  0.698132 0.974441
+DO concentration             OLS     17 114607  0.694252 0.980683
+DO concentration           Dummy     17 114607 -0.028391 1.798566
+
+================================================================================
+STARTING: Specific conductance
+================================================================================
+History: 744,501 added rows, 0 training-only stations
+
+Target: Specific conductance
+Nodes: 24
+Rows: 889,481
+Feature candidates: 10
+Outer fold 1/24 | test 47787846Outer fold 2/24 | test 58738608Outer fold 3/24 | test 67739434Outer fold 4/24 | test 75465016Outer fold 5/24 | test 81497938Outer fold 6/24 | test 82982643Outer fold 7/24 | test 83027786Outer fold 8/24 | test 83222751Outer fold 9/24 | test 84197086Outer fold 10/24 | test 88786999Outer fold 11/24 | test 90706215Outer fold 12/24 | test 92116891Outer fold 13/24 | test 93300040Outer fold 14/24 | test 93392084Outer fold 15/24 | test 96496279Outer fold 16/24 | test 96751415Outer fold 17/24 | test 97532807Outer fold 18/24 | test 110911305Outer fold 19/24 | test 126377584Outer fold 20/24 | test 131520862Outer fold 21/24 | test 133114453Outer fold 22/24 | test 134075067Outer fold 23/24 | test 186559442Outer fold 24/24 | test 203177183
+
+Saved: Specific conductance
+              Target           Model  Nodes   Rows        R2       RMSE
+Specific conductance Graph-Laplacian     24 144980  0.321692 365.361267
+Specific conductance      Spline GAM     24 144980  0.066022 428.723534
+Specific conductance           Dummy     24 144980 -0.066691 458.171916
+Specific conductance     Elastic Net     24 144980 -0.123774 470.271347
+Specific conductance           Ridge     24 144980 -0.227369 491.469600
+Specific conductance             OLS     24 144980 -0.727446 583.057444
+
+================================================================================
+STARTING: pH
+================================================================================
+History: 506,115 added rows, 0 training-only stations
+
+Target: pH
+Nodes: 19
+Rows: 627,126
+Feature candidates: 9
+Outer fold 1/19 | test 67739434Outer fold 2/19 | test 81497938Outer fold 3/19 | test 82982643Outer fold 4/19 | test 83027786Outer fold 5/19 | test 83222751Outer fold 6/19 | test 84197086Outer fold 7/19 | test 88786999Outer fold 8/19 | test 90706215Outer fold 9/19 | test 93300040Outer fold 10/19 | test 93392084Outer fold 11/19 | test 96496279Outer fold 12/19 | test 97532807Outer fold 13/19 | test 126377584Outer fold 14/19 | test 129078768Outer fold 15/19 | test 131520862Outer fold 16/19 | test 133114453Outer fold 17/19 | test 134075067Outer fold 18/19 | test 186559442Outer fold 19/19 | test 203177183
+
+Saved: pH
+Target           Model  Nodes   Rows        R2     RMSE
+    pH      Spline GAM     19 121011  0.006134 0.236204
+    pH     Elastic Net     19 121011  0.005712 0.236254
+    pH           Dummy     19 121011 -0.026353 0.240033
+    pH Graph-Laplacian     19 121011 -0.050865 0.242883
+    pH           Ridge     19 121011 -0.172841 0.256592
+    pH             OLS     19 121011 -0.272904 0.267314
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+History: 391,022 added rows, 0 training-only stations
+
+Target: Turbidity
+Nodes: 17
+Rows: 481,865
+Feature candidates: 9
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 93300040Outer fold 10/17 | test 93392084Outer fold 11/17 | test 96496279Outer fold 12/17 | test 97532807Outer fold 13/17 | test 126377584Outer fold 14/17 | test 129078768Outer fold 15/17 | test 131520862Outer fold 16/17 | test 133114453Outer fold 17/17 | test 134075067
+
+Saved: Turbidity
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     17 90843  0.128444 526.164593
+Turbidity             OLS     17 90843  0.099888 534.714676
+Turbidity     Elastic Net     17 90843  0.099075 534.955985
+Turbidity           Ridge     17 90843  0.095415 536.041655
+Turbidity Graph-Laplacian     17 90843  0.094607 536.281114
+Turbidity           Dummy     17 90843 -0.014504 567.676167
+              Target           Model  Nodes   Rows        R2       RMSE
+    DO concentration      Spline GAM     17 114607  0.714915   0.946965
+    DO concentration     Elastic Net     17 114607  0.708114   0.958195
+    DO concentration Graph-Laplacian     17 114607  0.705917   0.961795
+    DO concentration           Ridge     17 114607  0.698132   0.974441
+    DO concentration             OLS     17 114607  0.694252   0.980683
+    DO concentration           Dummy     17 114607 -0.028391   1.798566
+Specific conductance Graph-Laplacian     24 144980  0.321692 365.361267
+Specific conductance      Spline GAM     24 144980  0.066022 428.723534
+Specific conductance           Dummy     24 144980 -0.066691 458.171916
+Specific conductance     Elastic Net     24 144980 -0.123774 470.271347
+Specific conductance           Ridge     24 144980 -0.227369 491.469600
+Specific conductance             OLS     24 144980 -0.727446 583.057444
+           Turbidity      Spline GAM     17  90843  0.128444 526.164593
+           Turbidity             OLS     17  90843  0.099888 534.714676
+           Turbidity     Elastic Net     17  90843  0.099075 534.955985
+           Turbidity           Ridge     17  90843  0.095415 536.041655
+           Turbidity Graph-Laplacian     17  90843  0.094607 536.281114
+           Turbidity           Dummy     17  90843 -0.014504 567.676167
+   Water temperature             OLS     24 144980  0.855547   2.694101
+   Water temperature     Elastic Net     24 144980  0.850536   2.740437
+   Water temperature           Ridge     24 144980  0.849567   2.749304
+   Water temperature Graph-Laplacian     24 144980  0.813397   3.062035
+   Water temperature      Spline GAM     24 144980  0.757132   3.493306
+   Water temperature           Dummy     24 144980 -0.019502   7.157236
+                  pH      Spline GAM     19 121011  0.006134   0.236204
+                  pH     Elastic Net     19 121011  0.005712   0.236254
+                  pH           Dummy     19 121011 -0.026353   0.240033
+                  pH Graph-Laplacian     19 121011 -0.050865   0.242883
+                  pH           Ridge     19 121011 -0.172841   0.256592
+                  pH             OLS     19 121011 -0.272904   0.267314
+Saved master metrics.
+Prediction rows: 3,698,526
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+              target           model          features  outer_folds
+    DO concentration           Dummy        configured           17
+    DO concentration     Elastic Net        K=2 | none           14
+    DO concentration     Elastic Net K=2 | local_slope            2
+    DO concentration     Elastic Net        K=4 | none            1
+    DO concentration Graph-Laplacian        configured           15
+    DO concentration Graph-Laplacian        K=2 | none            1
+    DO concentration Graph-Laplacian        K=4 | none            1
+    DO concentration             OLS        configured           14
+    DO concentration             OLS        K=2 | none            2
+    DO concentration             OLS        K=4 | none            1
+    DO concentration           Ridge        K=2 | none           14
+    DO concentration           Ridge        configured            2
+    DO concentration           Ridge        K=4 | none            1
+    DO concentration      Spline GAM        K=2 | none           17
+Specific conductance           Dummy        configured           24
+Specific conductance     Elastic Net        K=4 | none           23
+Specific conductance     Elastic Net     K=4 | reduced            1
+Specific conductance Graph-Laplacian K=1 | local_slope           14
+Specific conductance Graph-Laplacian K=2 | local_slope            6
+Specific conductance Graph-Laplacian        configured            3
+Specific conductance Graph-Laplacian     K=4 | reduced            1
+Specific conductance             OLS        K=4 | none           23
+Specific conductance             OLS     K=4 | reduced            1
+Specific conductance           Ridge        K=4 | none           23
+Specific conductance           Ridge     K=4 | reduced            1
+Specific conductance      Spline GAM K=2 | local_slope           21
+Specific conductance      Spline GAM        K=2 | none            2
+Specific conductance      Spline GAM        configured            1
+           Turbidity           Dummy        configured           17
+           Turbidity     Elastic Net        K=4 | none           13
+           Turbidity     Elastic Net        K=2 | none            2
+           Turbidity     Elastic Net K=2 | local_slope            1
+           Turbidity     Elastic Net     K=4 | reduced            1
+           Turbidity Graph-Laplacian        K=4 | none           10
+           Turbidity Graph-Laplacian K=4 | local_slope            4
+           Turbidity Graph-Laplacian K=2 | local_slope            2
+           Turbidity Graph-Laplacian     K=4 | reduced            1
+           Turbidity             OLS        K=4 | none           14
+           Turbidity             OLS        K=2 | none            2
+           Turbidity             OLS     K=4 | reduced            1
+           Turbidity           Ridge        K=4 | none           13
+           Turbidity           Ridge        K=2 | none            2
+           Turbidity           Ridge K=2 | local_slope            1
+           Turbidity           Ridge     K=4 | reduced            1
+           Turbidity      Spline GAM        K=1 | none           15
+           Turbidity      Spline GAM     K=4 | reduced            1
+           Turbidity      Spline GAM        configured            1
+   Water temperature           Dummy        configured           24
+   Water temperature     Elastic Net        configured           24
+   Water temperature Graph-Laplacian        configured           23
+   Water temperature Graph-Laplacian K=4 | local_slope            1
+   Water temperature             OLS        configured           24
+   Water temperature           Ridge        configured           24
+   Water temperature      Spline GAM        configured           18
+   Water temperature      Spline GAM     K=1 | reduced            3
+   Water temperature      Spline GAM        K=2 | none            3
+                  pH           Dummy        configured           19
+                  pH     Elastic Net        configured           19
+                  pH Graph-Laplacian        K=4 | none           14
+                  pH Graph-Laplacian K=4 | local_slope            4
+                  pH Graph-Laplacian     K=4 | reduced            1
+                  pH             OLS        K=4 | none           16
+                  pH             OLS K=4 | local_slope            2
+                  pH             OLS     K=4 | reduced            1
+                  pH           Ridge        K=4 | none           15
+                  pH           Ridge K=4 | local_slope            3
+                  pH           Ridge     K=4 | reduced            1
+                  pH      Spline GAM     K=1 | reduced            8
+                  pH      Spline GAM     K=2 | reduced            5
+                  pH      Spline GAM K=1 | local_slope            3
+                  pH      Spline GAM        K=2 | none            1
+                  pH      Spline GAM     K=4 | reduced            1
+                  pH      Spline GAM        configured            1
+Saved configs.
+
+R2 TABLE
+
+Model                    Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                                      
+DO concentration     -0.028391     0.708114         0.705917  0.694252  0.698132    0.714915
+Specific conductance -0.066691    -0.123774         0.321692 -0.727446 -0.227369    0.066022
+Turbidity            -0.014504     0.099075         0.094607  0.099888  0.095415    0.128444
+Water temperature    -0.019502     0.850536         0.813397  0.855547  0.849567    0.757132
+pH                   -0.026353     0.005712        -0.050865 -0.272904 -0.172841    0.006134
+
+RMSE TABLE
+
+Model                      Dummy  Elastic Net  Graph-Laplacian         OLS       Ridge  Spline GAM
+Target                                                                                            
+DO concentration        1.798566     0.958195         0.961795    0.980683    0.974441    0.946965
+Specific conductance  458.171916   470.271347       365.361267  583.057444  491.469600  428.723534
+Turbidity             567.676167   534.955985       536.281114  534.714676  536.041655  526.164593
+Water temperature       7.157236     2.740437         3.062035    2.694101    2.749304    3.493306
+pH                      0.240033     0.236254         0.242883    0.267314    0.256592    0.236204
+
+BEST CONVENTIONAL MODELS
+
+              Target      Model  Nodes   Rows       R2       RMSE
+    DO concentration Spline GAM     17 114607 0.714915   0.946965
+Specific conductance Spline GAM     24 144980 0.066022 428.723534
+           Turbidity Spline GAM     17  90843 0.128444 526.164593
+   Water temperature        OLS     24 144980 0.855547   2.694101
+                  pH Spline GAM     19 121011 0.006134   0.236204
+
+================================================================================
+Water temperature
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+ {'alpha': 1.0}           20
+ {'alpha': 0.3}            3
+{'alpha': 0.03}            1
+
+ Elastic Net
+                      Parameters  Outer folds
+ {'alpha': 0.1, 'l1_ratio': 0.5}           18
+{'alpha': 0.01, 'l1_ratio': 0.5}            6
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 4, 'alpha': 1.0}           18
+ {'n_knots': 4, 'alpha': 0.1}            3
+{'n_knots': 6, 'alpha': 10.0}            2
+ {'n_knots': 6, 'alpha': 1.0}            1
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+DO concentration
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+ {'alpha': 0.3}           11
+ {'alpha': 1.0}            4
+{'alpha': 0.03}            2
+
+ Elastic Net
+                      Parameters  Outer folds
+{'alpha': 0.01, 'l1_ratio': 0.5}           16
+ {'alpha': 0.1, 'l1_ratio': 0.5}            1
+
+ Spline GAM
+                  Parameters  Outer folds
+{'n_knots': 4, 'alpha': 1.0}           17
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+Specific conductance
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+ {'alpha': 3.0}           22
+ {'alpha': 1.0}            1
+{'alpha': 10.0}            1
+
+ Elastic Net
+                      Parameters  Outer folds
+{'alpha': 1.0, 'l1_ratio': 0.75}           22
+ {'alpha': 0.1, 'l1_ratio': 0.5}            2
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 6, 'alpha': 1.0}           18
+{'n_knots': 6, 'alpha': 10.0}            5
+ {'n_knots': 4, 'alpha': 0.1}            1
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+pH
+================================================================================
+
+ Ridge
+    Parameters  Outer folds
+{'alpha': 3.0}           17
+{'alpha': 1.0}            2
+
+ Elastic Net
+                        Parameters  Outer folds
+  {'alpha': 0.01, 'l1_ratio': 0.5}           18
+{'alpha': 0.001, 'l1_ratio': 0.25}            1
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 6, 'alpha': 1.0}           14
+{'n_knots': 6, 'alpha': 10.0}            5
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+{'alpha': 0.03}           13
+ {'alpha': 1.0}            2
+ {'alpha': 0.3}            1
+ {'alpha': 3.0}            1
+
+ Elastic Net
+                        Parameters  Outer folds
+{'alpha': 0.001, 'l1_ratio': 0.25}           13
+   {'alpha': 0.1, 'l1_ratio': 0.5}            3
+  {'alpha': 0.01, 'l1_ratio': 0.5}            1
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 4, 'alpha': 1.0}           16
+{'n_knots': 6, 'alpha': 10.0}            1
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+              Target           Model  Nodes   Rows        R2       RMSE
+    DO concentration      Spline GAM     17 114607  0.714915   0.946965
+    DO concentration     Elastic Net     17 114607  0.708114   0.958195
+    DO concentration Graph-Laplacian     17 114607  0.705917   0.961795
+    DO concentration           Ridge     17 114607  0.698132   0.974441
+    DO concentration             OLS     17 114607  0.694252   0.980683
+    DO concentration           Dummy     17 114607 -0.028391   1.798566
+Specific conductance Graph-Laplacian     24 144980  0.321692 365.361267
+Specific conductance      Spline GAM     24 144980  0.066022 428.723534
+Specific conductance           Dummy     24 144980 -0.066691 458.171916
+Specific conductance     Elastic Net     24 144980 -0.123774 470.271347
+Specific conductance           Ridge     24 144980 -0.227369 491.469600
+Specific conductance             OLS     24 144980 -0.727446 583.057444
+           Turbidity      Spline GAM     17  90843  0.128444 526.164593
+           Turbidity             OLS     17  90843  0.099888 534.714676
+           Turbidity     Elastic Net     17  90843  0.099075 534.955985
+           Turbidity           Ridge     17  90843  0.095415 536.041655
+           Turbidity Graph-Laplacian     17  90843  0.094607 536.281114
+           Turbidity           Dummy     17  90843 -0.014504 567.676167
+   Water temperature             OLS     24 144980  0.855547   2.694101
+   Water temperature     Elastic Net     24 144980  0.850536   2.740437
+   Water temperature           Ridge     24 144980  0.849567   2.749304
+   Water temperature Graph-Laplacian     24 144980  0.813397   3.062035
+   Water temperature      Spline GAM     24 144980  0.757132   3.493306
+   Water temperature           Dummy     24 144980 -0.019502   7.157236
+                  pH      Spline GAM     19 121011  0.006134   0.236204
+                  pH     Elastic Net     19 121011  0.005712   0.236254
+                  pH           Dummy     19 121011 -0.026353   0.240033
+                  pH Graph-Laplacian     19 121011 -0.050865   0.242883
+                  pH           Ridge     19 121011 -0.172841   0.256592
+                  pH             OLS     19 121011 -0.272904   0.267314
+Finished.
