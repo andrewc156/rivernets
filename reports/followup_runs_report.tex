@@ -37,7 +37,7 @@ at different stations, and for the linear models the indicators then also absorb
 present, so specific conductance and pH get much worse. (3) Gradient boosting chooses the
 neighbour reading for pH and turbidity only, and gains nothing reliable. (4) Hourly upstream rainfall
 from NOAA MRMS radar is chosen by the inner loop in almost every fold but adds at most about $0.01$
-(DO, graph and two linear models) and does not help turbidity; rain sampled at the 67 nodes of the
+(DO, graph and two linear models) and does not help turbidity, also not with gradient boosting; rain sampled at the 67 nodes of the
 compressed graph does as well as rain along the whole upstream river. (5) Daily Daymet
 precipitation at the station, available for 2025 only and so tested on the $30\%$ of rows it covers,
 adds nothing reliable for any target and is slightly worse than MRMS upstream rain for DO and water
@@ -323,8 +323,8 @@ with turbidity and about $0.01$ with specific conductance.
 
 \paragraph{Option.} \code{BENCHMARK\_RAIN=uncompressed|compressed} offers every feature candidate
 with and without the five rain columns, and the inner loop chooses, as for the neighbour reading.
-Both runs used the five fast models and the graph model; gradient boosting and random forest were
-not part of these runs.
+Both runs used the five fast models and the graph model; gradient boosting was run afterwards with
+the same option (Table~\ref{tab:raingb}). Random forest was started but cancelled (too slow).
 
 \begin{table}[h]
 \centering
@@ -387,8 +387,8 @@ Turbidity     & Graph-Laplacian & $0.104$ & $-0.011$ & ($-0.10$, $0.02$) & $-0.0
         loses $0.01$ and the Spline GAM gains nothing. Turbidity $R^2$ is dominated by a few stations with very large and
         variable readings: the graph model's loss comes mostly from 09365000 (San Juan River at
         Farmington), whose mean bias grows from $618$ to $691$\,FNU. A possible reason is that sediment jumps after storms above some threshold, which a linear
-        term in log rain may not capture;
-        gradient boosting, the best turbidity model ($0.391$), was not run with rain.
+        term in log rain may not capture; gradient boosting, which can represent thresholds, does
+        not gain either (Table~\ref{tab:raingb}).
   \item \textbf{The graph model's pH loss ($-0.03$) comes from one station}, 09429490 above
         Imperial Dam, the outlying fold of the main report, whose mean bias moves from $-0.08$ to
         $-0.23$. Of the other 18 stations, 15 (uncompressed) and 16 (compressed) are better; without
@@ -399,6 +399,45 @@ Turbidity     & Graph-Laplacian & $0.104$ & $-0.011$ & ($-0.10$, $0.02$) & $-0.0
         compressed scheme for DO (Elastic Net $+0.007$, Spline GAM $+0.005$; Ridge $+0.010$ and the
         graph model $+0.002$ with intervals touching zero). Rain at the 67 nodes of the compressed graph
         carries as much information as rain along every 90\,m cell upstream.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Upstream rainfall with gradient boosting: paired $\Delta R^2$ against gradient boosting of the
+main benchmark (same settings). Folds: outer folds whose chosen candidate included rain
+(uncompressed/compressed).}
+\label{tab:raingb}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l r rc rc c}
+\toprule
+ & & \multicolumn{2}{c}{Uncompressed} & \multicolumn{2}{c}{Compressed} & \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Target & Base & $\Delta R^2$ & Interval & $\Delta R^2$ & Interval & Folds \\
+\midrule
+Water temp.  & $0.833$  & $-0.007$ & ($-0.03$, $0.01$) & $-0.011$ & ($-0.04$, $0.00$) & 24/20 of 24 \\
+DO           & $0.733$  & $+0.004$ & ($-0.01$, $0.01$) & $-0.001$ & ($-0.01$, $0.01$) & 7/7 of 17 \\
+Spec.\ cond. & $-0.094$ & $+0.008$ & ($-0.05$, $0.11$) & $+0.005$ & ($-0.04$, $0.13$) & 10/13 of 24 \\
+pH           & $-0.171$ & $+0.041$ & ($-0.03$, $0.15$) & $+0.004$ & ($-0.05$, $0.05$) & 18/18 of 19 \\
+Turbidity    & $0.391$  & $-0.017$ & ($-0.07$, $0.06$) & $-0.062$ & ($-0.14$, $0.06$) & 14/14 of 17 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Gradient boosting.} Rain does not help gradient boosting either; no interval excludes zero.
+\begin{itemize}
+  \item \textbf{Turbidity, its best target, gets slightly worse}, although rain is chosen in 14 of 17
+        folds: $-0.017$ (uncompressed) and $-0.062$ (compressed), 8 stations better and 6 worse in
+        both. The loss comes from 09368000 (San Juan River at Shiprock; $-0.018$ and $-0.063$) and
+        09163500 (Colorado River near the Colorado--Utah state line; $-0.014$ in both). So a tree
+        model, which can represent a storm threshold, does not turn rain into better turbidity
+        predictions at unmonitored stations either.
+  \item \textbf{The pH gain with uncompressed rain ($+0.041$) is one station}: $0.039$ of it comes
+        from 09429490 above Imperial Dam, the outlying pH fold. With compressed rain the change is
+        $+0.004$.
+  \item Water temperature loses $0.007$--$0.011$ (mostly at 09429490); DO and specific
+        conductance are unchanged. Compressed against uncompressed, no interval excludes zero.
 \end{itemize}
 
 % =====================================================================
@@ -531,7 +570,7 @@ Turbidity     & Graph-Laplacian & $0.000$ & $+0.041$ & ($-0.12$, $0.11$) & $-0.0
         Gradient boosting stays the best turbidity model without it.
   \item \textbf{Upstream rainfall adds little.} It is chosen in nearly every fold, but the only
         reliable gains are about $0.01$ for DO; turbidity, the target that rain should help most, does
-        not improve for the graph or linear models. Sampling rain at the compressed graph's 67 nodes
+        not improve for the graph, linear or gradient-boosting models. Sampling rain at the compressed graph's 67 nodes
         is as good as sampling it along every upstream cell.
   \item \textbf{Daymet precipitation at the station adds nothing reliable} on the 2025 rows it
         covers, and is slightly worse than MRMS upstream rain for DO and water temperature in the
@@ -540,9 +579,8 @@ Turbidity     & Graph-Laplacian & $0.000$ & $+0.041$ & ($-0.12$, $0.11$) & $-0.0
   \item The main benchmark (Table~\ref{tab:base}) remains the reference.
 \end{enumerate}
 
-\paragraph{Next steps (proposed, not run).} Turbidity with water-year indicators or upstream rain
-for gradient boosting and the Graph + GB hybrid (rain enters turbidity through thresholds that a
-tree model can represent); the history with station-level offsets for the linear models or
+\paragraph{Next steps (proposed, not run).} Turbidity with water-year indicators for gradient
+boosting and the Graph + GB hybrid; the history with station-level offsets for the linear models or
 restricted to stations that report in every year; clipping turbidity at the sensor maximum
 (3{,}800--4{,}000\,FNU in the added years); a dam-tailwater indicator for the Lower Colorado.
 
@@ -566,7 +604,11 @@ with the same six models, saved in \code{results/benchmark\_results\_rain\_uncom
 (\code{data/rain/mrms/}) and \code{build\_rain\_features.py}
 (\code{data/benchmark\_data/rain\_features\_*.pkl}). Their comparisons are
 \code{results/rain\_uncompressed\_vs\_base\_*.csv}, \code{results/rain\_compressed\_vs\_base\_*.csv} and
-\code{results/rain\_compressed\_vs\_uncompressed\_*.csv}.
+\code{results/rain\_compressed\_vs\_uncompressed\_*.csv}. Gradient boosting with rain ran the same
+way with \code{BENCHMARK\_MODELS=Gradient Boosting}, saved in
+\code{results/benchmark\_results\_rain\_uncompressed\_gb/} and \code{..\_compressed\_gb/} (logs
+\code{rain\_*\_gb.log}), and is compared with gradient boosting in
+\code{results/benchmark\_results\_inner\_fs/} (\code{results/rain\_*\_gradient\_boosting.csv}).
 The Daymet runs use \code{BENCHMARK\_DAYMET=baseline|on} (the MRMS arm with
 \code{BENCHMARK\_RAIN=uncompressed}) at commit \code{9950b6c}, from \code{run\_daymet\_parallel.sh}
 with the same six models, saved in \code{results/benchmark\_results\_daymet\_base|mrms|on/}
