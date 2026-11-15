@@ -116,6 +116,18 @@ RAIN = os.environ.get("BENCHMARK_RAIN", "")
 RAIN_COLS = ["rain_1h", "rain_6h", "rain_24h", "rain_72h", "rain_168h"]
 if RAIN not in ("", "uncompressed", "compressed"):
     raise ValueError("BENCHMARK_RAIN must be '', 'uncompressed' or 'compressed'")
+
+# Daymet precipitation (opt-in): BENCHMARK_DAYMET=baseline keeps only the rows
+# with Daymet features (local dates 2025-01-31 .. 2025-12-31, from
+# build_daymet_features.py) and adds nothing; BENCHMARK_DAYMET=on also offers
+# dm_1d, dm_3d, dm_7d, dm_30d, dm_api (log(1 + mm) over the 1, 3, 7, 30 days
+# before the local date, and the antecedent precipitation index; Daymet at the
+# station itself, not upstream) with every candidate ("... + D"). Both keep the
+# same rows, so baseline, on, and baseline with BENCHMARK_RAIN are paired.
+DAYMET = os.environ.get("BENCHMARK_DAYMET", "")
+DAYMET_COLS = ["dm_1d", "dm_3d", "dm_7d", "dm_30d", "dm_api"]
+if DAYMET not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_DAYMET must be '', 'baseline' or 'on'")
 if YEAR_EFFECT not in ("", "wy", "month"):
     raise ValueError("BENCHMARK_YEAR_EFFECT must be '', 'wy' or 'month'")
 NEIGHBOUR_K = 3
@@ -169,6 +181,8 @@ elif TIME_SPLIT:
     _default_results = "results/benchmark_results_time_split"
 elif DISCHARGE_MODE:
     _default_results = f"results/benchmark_results_discharge_{DISCHARGE_MODE}"
+elif DAYMET:
+    _default_results = f"results/benchmark_results_daymet_{DAYMET}" + (f"_rain_{RAIN}" if RAIN else "")
 elif RAIN:
     _default_results = f"results/benchmark_results_rain_{RAIN}"
 elif NEIGHBOUR:
@@ -1390,6 +1404,28 @@ if NEIGHBOUR:
             **{f"{name} + N": [*features, NEIGHBOUR_COL]
                for name, features in cfg["candidates"].items()}
         }
+
+
+if DAYMET:
+    _dm = pd.read_pickle(BENCHMARK_DIR / "daymet_features.pkl")
+    _dm = _dm[_dm[DAYMET_COLS].notna().all(axis=1)]
+    print(f"\nDaymet ({DAYMET}): rows restricted to node-hours with Daymet features")
+    for target, cfg in TARGET_CONFIGS.items():
+        df = cfg["df"].drop(columns=DAYMET_COLS, errors="ignore")
+        merged = df.merge(_dm, on=["node", "time"], how="inner")
+        cfg["df"] = merged
+        used = merged.dropna(subset=[target, *TARGET_CHEMISTRY[target]])
+        per_node = used.groupby("node").size()
+        print(
+            f"  {target:<22} stations {len(per_node):>2} | rows {len(used):>7,} | "
+            f"rows per station min {per_node.min():,}, median {int(per_node.median()):,}"
+        )
+        if DAYMET == "on":
+            cfg["candidates"] = {
+                **cfg["candidates"],
+                **{f"{name} + D": [*features, *DAYMET_COLS]
+                   for name, features in cfg["candidates"].items()}
+            }
 
 
 if RAIN:
@@ -2622,6 +2658,7 @@ benchmark_config = {
         "history": HISTORY_DIR or "off",
         "year_effect": YEAR_EFFECT or "off",
         "rain": RAIN or "off",
+        "daymet": DAYMET or "off",
         "time_split": TIME_SPLIT or "off",
         "split": SPLIT,
         "split_repeats": SPLIT_REPEATS,
