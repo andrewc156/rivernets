@@ -246,7 +246,7 @@ def fig_map():
     cb.set_label("Graph model's specific-conductance error vs Ridge, per station (leave one station out)",
                  color=INK2, fontsize=11.5)
     ax.scatter([], [], marker="^", s=60, color=INK2, label="Major dam")
-    ax.legend(loc="lower left", frameon=False, fontsize=11)
+    ax.legend(loc="upper left", frameon=False, fontsize=11)   # empty corner, clear of the river
     title(fig, "Where the network helps: salinity in the upper basin",
           "Blue stations: the graph model's error is lower than Ridge's. Labels give its R² "
           "within each subbasin.")
