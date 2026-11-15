@@ -1,0 +1,848 @@
+===== part: Water temperature =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/daymet_parts/base/water_temperature
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Daymet (baseline): rows restricted to node-hours with Daymet features
+  Water temperature      stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  DO concentration       stations 15 | rows  53,398 | rows per station min 701, median 2,185
+  Specific conductance   stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  pH                     stations 15 | rows  52,668 | rows per station min 1,535, median 2,185
+  Turbidity              stations 13 | rows  45,067 | rows per station min 635, median 2,183
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Water temperature']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: Water temperature
+================================================================================
+
+Target: Water temperature
+Nodes: 19
+Rows: 61,045
+Feature candidates: 10
+Outer fold 1/19 | test 47787846Outer fold 2/19 | test 58738608Outer fold 3/19 | test 67739434Outer fold 4/19 | test 81497938Outer fold 5/19 | test 82982643Outer fold 6/19 | test 83027786Outer fold 7/19 | test 83222751Outer fold 8/19 | test 88786999Outer fold 9/19 | test 90706215Outer fold 10/19 | test 93300040Outer fold 11/19 | test 93392084Outer fold 12/19 | test 96496279Outer fold 13/19 | test 96751415Outer fold 14/19 | test 97532807Outer fold 15/19 | test 110911305Outer fold 16/19 | test 126377584Outer fold 17/19 | test 131520862Outer fold 18/19 | test 186559442Outer fold 19/19 | test 203177183
+
+Saved: Water temperature
+           Target           Model  Nodes  Rows        R2     RMSE
+Water temperature           Ridge     19 61045  0.886132 2.146969
+Water temperature     Elastic Net     19 61045  0.884875 2.158783
+Water temperature             OLS     19 61045  0.884626 2.161116
+Water temperature Graph-Laplacian     19 61045  0.875586 2.244191
+Water temperature      Spline GAM     19 61045  0.848852 2.473578
+Water temperature           Dummy     19 61045 -0.058383 6.545545
+           Target           Model  Nodes  Rows        R2     RMSE
+Water temperature           Ridge     19 61045  0.886132 2.146969
+Water temperature     Elastic Net     19 61045  0.884875 2.158783
+Water temperature             OLS     19 61045  0.884626 2.161116
+Water temperature Graph-Laplacian     19 61045  0.875586 2.244191
+Water temperature      Spline GAM     19 61045  0.848852 2.473578
+Water temperature           Dummy     19 61045 -0.058383 6.545545
+Saved master metrics.
+Prediction rows: 366,270
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+           target           model      features  outer_folds
+Water temperature           Dummy    configured           19
+Water temperature     Elastic Net K=1 | reduced           16
+Water temperature     Elastic Net K=2 | reduced            2
+Water temperature     Elastic Net    configured            1
+Water temperature Graph-Laplacian K=1 | reduced           12
+Water temperature Graph-Laplacian    configured            7
+Water temperature             OLS K=1 | reduced           15
+Water temperature             OLS    configured            4
+Water temperature           Ridge K=1 | reduced           18
+Water temperature           Ridge    configured            1
+Water temperature      Spline GAM    configured           13
+Water temperature      Spline GAM K=1 | reduced            6
+Saved configs.
+
+R2 TABLE
+
+Model                 Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                                   
+Water temperature -0.058383     0.884875         0.875586  0.884626  0.886132    0.848852
+
+RMSE TABLE
+
+Model                 Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                                   
+Water temperature  6.545545     2.158783         2.244191  2.161116  2.146969    2.473578
+
+BEST CONVENTIONAL MODELS
+
+           Target Model  Nodes  Rows       R2     RMSE
+Water temperature Ridge     19 61045 0.886132 2.146969
+
+================================================================================
+Water temperature
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+{'alpha': 0.03}           19
+
+ Elastic Net
+                        Parameters  Outer folds
+{'alpha': 0.001, 'l1_ratio': 0.25}           18
+  {'alpha': 0.01, 'l1_ratio': 0.5}            1
+
+ Spline GAM
+                  Parameters  Outer folds
+{'n_knots': 4, 'alpha': 1.0}           18
+{'n_knots': 6, 'alpha': 1.0}            1
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+           Target           Model  Nodes  Rows        R2     RMSE
+Water temperature           Ridge     19 61045  0.886132 2.146969
+Water temperature     Elastic Net     19 61045  0.884875 2.158783
+Water temperature             OLS     19 61045  0.884626 2.161116
+Water temperature Graph-Laplacian     19 61045  0.875586 2.244191
+Water temperature      Spline GAM     19 61045  0.848852 2.473578
+Water temperature           Dummy     19 61045 -0.058383 6.545545
+Finished.
+===== part: DO concentration =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/daymet_parts/base/do_concentration
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Daymet (baseline): rows restricted to node-hours with Daymet features
+  Water temperature      stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  DO concentration       stations 15 | rows  53,398 | rows per station min 701, median 2,185
+  Specific conductance   stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  pH                     stations 15 | rows  52,668 | rows per station min 1,535, median 2,185
+  Turbidity              stations 13 | rows  45,067 | rows per station min 635, median 2,183
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['DO concentration']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: DO concentration
+================================================================================
+
+Target: DO concentration
+Nodes: 15
+Rows: 53,398
+Feature candidates: 9
+Outer fold 1/15 | test 67739434Outer fold 2/15 | test 81497938Outer fold 3/15 | test 82982643Outer fold 4/15 | test 83027786Outer fold 5/15 | test 83222751Outer fold 6/15 | test 88786999Outer fold 7/15 | test 90706215Outer fold 8/15 | test 93300040Outer fold 9/15 | test 93392084Outer fold 10/15 | test 96496279Outer fold 11/15 | test 97532807Outer fold 12/15 | test 126377584Outer fold 13/15 | test 131520862Outer fold 14/15 | test 186559442Outer fold 15/15 | test 203177183
+
+Saved: DO concentration
+          Target           Model  Nodes  Rows        R2     RMSE
+DO concentration Graph-Laplacian     15 53398  0.741202 0.776186
+DO concentration             OLS     15 53398  0.726977 0.797232
+DO concentration           Ridge     15 53398  0.720724 0.806310
+DO concentration     Elastic Net     15 53398  0.715529 0.813775
+DO concentration      Spline GAM     15 53398  0.681940 0.860478
+DO concentration           Dummy     15 53398 -0.047186 1.561339
+          Target           Model  Nodes  Rows        R2     RMSE
+DO concentration Graph-Laplacian     15 53398  0.741202 0.776186
+DO concentration             OLS     15 53398  0.726977 0.797232
+DO concentration           Ridge     15 53398  0.720724 0.806310
+DO concentration     Elastic Net     15 53398  0.715529 0.813775
+DO concentration      Spline GAM     15 53398  0.681940 0.860478
+DO concentration           Dummy     15 53398 -0.047186 1.561339
+Saved master metrics.
+Prediction rows: 320,388
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+          target           model          features  outer_folds
+DO concentration           Dummy        configured           15
+DO concentration     Elastic Net        K=2 | none           14
+DO concentration     Elastic Net K=4 | local_slope            1
+DO concentration Graph-Laplacian        K=2 | none           11
+DO concentration Graph-Laplacian     K=4 | reduced            2
+DO concentration Graph-Laplacian K=2 | local_slope            1
+DO concentration Graph-Laplacian        configured            1
+DO concentration             OLS        configured           13
+DO concentration             OLS K=4 | local_slope            1
+DO concentration             OLS     K=4 | reduced            1
+DO concentration           Ridge        K=2 | none           13
+DO concentration           Ridge K=2 | local_slope            1
+DO concentration           Ridge K=4 | local_slope            1
+DO concentration      Spline GAM        K=2 | none           10
+DO concentration      Spline GAM     K=4 | reduced            2
+DO concentration      Spline GAM K=4 | local_slope            1
+DO concentration      Spline GAM        K=4 | none            1
+DO concentration      Spline GAM        configured            1
+Saved configs.
+
+R2 TABLE
+
+Model                Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                                  
+DO concentration -0.047186     0.715529         0.741202  0.726977  0.720724     0.68194
+
+RMSE TABLE
+
+Model                Dummy  Elastic Net  Graph-Laplacian       OLS    Ridge  Spline GAM
+Target                                                                                 
+DO concentration  1.561339     0.813775         0.776186  0.797232  0.80631    0.860478
+
+BEST CONVENTIONAL MODELS
+
+          Target Model  Nodes  Rows       R2     RMSE
+DO concentration   OLS     15 53398 0.726977 0.797232
+
+================================================================================
+DO concentration
+================================================================================
+
+ Ridge
+    Parameters  Outer folds
+{'alpha': 1.0}           14
+{'alpha': 0.3}            1
+
+ Elastic Net
+                      Parameters  Outer folds
+ {'alpha': 0.1, 'l1_ratio': 0.5}           14
+{'alpha': 0.01, 'l1_ratio': 0.5}            1
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 4, 'alpha': 1.0}            8
+{'n_knots': 6, 'alpha': 10.0}            5
+ {'n_knots': 6, 'alpha': 1.0}            2
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+          Target           Model  Nodes  Rows        R2     RMSE
+DO concentration Graph-Laplacian     15 53398  0.741202 0.776186
+DO concentration             OLS     15 53398  0.726977 0.797232
+DO concentration           Ridge     15 53398  0.720724 0.806310
+DO concentration     Elastic Net     15 53398  0.715529 0.813775
+DO concentration      Spline GAM     15 53398  0.681940 0.860478
+DO concentration           Dummy     15 53398 -0.047186 1.561339
+Finished.
+===== part: Specific conductance =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/daymet_parts/base/specific_conductance
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Daymet (baseline): rows restricted to node-hours with Daymet features
+  Water temperature      stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  DO concentration       stations 15 | rows  53,398 | rows per station min 701, median 2,185
+  Specific conductance   stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  pH                     stations 15 | rows  52,668 | rows per station min 1,535, median 2,185
+  Turbidity              stations 13 | rows  45,067 | rows per station min 635, median 2,183
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Specific conductance']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: Specific conductance
+================================================================================
+
+Target: Specific conductance
+Nodes: 19
+Rows: 61,045
+Feature candidates: 10
+Outer fold 1/19 | test 47787846Outer fold 2/19 | test 58738608Outer fold 3/19 | test 67739434Outer fold 4/19 | test 81497938Outer fold 5/19 | test 82982643Outer fold 6/19 | test 83027786Outer fold 7/19 | test 83222751Outer fold 8/19 | test 88786999Outer fold 9/19 | test 90706215Outer fold 10/19 | test 93300040Outer fold 11/19 | test 93392084Outer fold 12/19 | test 96496279Outer fold 13/19 | test 96751415Outer fold 14/19 | test 97532807Outer fold 15/19 | test 110911305Outer fold 16/19 | test 126377584Outer fold 17/19 | test 131520862Outer fold 18/19 | test 186559442Outer fold 19/19 | test 203177183
+
+Saved: Specific conductance
+              Target           Model  Nodes  Rows        R2       RMSE
+Specific conductance Graph-Laplacian     19 61045  0.275756 315.680911
+Specific conductance           Dummy     19 61045 -0.088216 386.957548
+Specific conductance      Spline GAM     19 61045 -0.140321 396.113109
+Specific conductance           Ridge     19 61045 -0.957693 519.012696
+Specific conductance     Elastic Net     19 61045 -0.975982 521.431451
+Specific conductance             OLS     19 61045 -1.035602 529.239451
+              Target           Model  Nodes  Rows        R2       RMSE
+Specific conductance Graph-Laplacian     19 61045  0.275756 315.680911
+Specific conductance           Dummy     19 61045 -0.088216 386.957548
+Specific conductance      Spline GAM     19 61045 -0.140321 396.113109
+Specific conductance           Ridge     19 61045 -0.957693 519.012696
+Specific conductance     Elastic Net     19 61045 -0.975982 521.431451
+Specific conductance             OLS     19 61045 -1.035602 529.239451
+Saved master metrics.
+Prediction rows: 366,270
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+              target           model          features  outer_folds
+Specific conductance           Dummy        configured           19
+Specific conductance     Elastic Net        K=1 | none           13
+Specific conductance     Elastic Net        K=2 | none            4
+Specific conductance     Elastic Net K=2 | local_slope            1
+Specific conductance     Elastic Net     K=2 | reduced            1
+Specific conductance Graph-Laplacian K=1 | local_slope            7
+Specific conductance Graph-Laplacian     K=1 | reduced            3
+Specific conductance Graph-Laplacian K=2 | local_slope            3
+Specific conductance Graph-Laplacian     K=2 | reduced            3
+Specific conductance Graph-Laplacian        K=1 | none            1
+Specific conductance Graph-Laplacian        K=2 | none            1
+Specific conductance Graph-Laplacian     K=4 | reduced            1
+Specific conductance             OLS        K=1 | none           14
+Specific conductance             OLS        K=2 | none            3
+Specific conductance             OLS K=2 | local_slope            1
+Specific conductance             OLS     K=2 | reduced            1
+Specific conductance           Ridge        K=1 | none           12
+Specific conductance           Ridge        K=2 | none            5
+Specific conductance           Ridge K=2 | local_slope            1
+Specific conductance           Ridge     K=2 | reduced            1
+Specific conductance      Spline GAM        K=1 | none           17
+Specific conductance      Spline GAM K=1 | local_slope            1
+Specific conductance      Spline GAM        K=2 | none            1
+Saved configs.
+
+R2 TABLE
+
+Model                    Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                                      
+Specific conductance -0.088216    -0.975982         0.275756 -1.035602 -0.957693   -0.140321
+
+RMSE TABLE
+
+Model                      Dummy  Elastic Net  Graph-Laplacian         OLS       Ridge  Spline GAM
+Target                                                                                            
+Specific conductance  386.957548   521.431451       315.680911  529.239451  519.012696  396.113109
+
+BEST CONVENTIONAL MODELS
+
+              Target Model  Nodes  Rows        R2       RMSE
+Specific conductance Dummy     19 61045 -0.088216 386.957548
+
+================================================================================
+Specific conductance
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+{'alpha': 10.0}           18
+{'alpha': 0.03}            1
+
+ Elastic Net
+                        Parameters  Outer folds
+  {'alpha': 1.0, 'l1_ratio': 0.75}           18
+{'alpha': 0.001, 'l1_ratio': 0.25}            1
+
+ Spline GAM
+                   Parameters  Outer folds
+{'n_knots': 6, 'alpha': 10.0}           18
+ {'n_knots': 4, 'alpha': 1.0}            1
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+              Target           Model  Nodes  Rows        R2       RMSE
+Specific conductance Graph-Laplacian     19 61045  0.275756 315.680911
+Specific conductance           Dummy     19 61045 -0.088216 386.957548
+Specific conductance      Spline GAM     19 61045 -0.140321 396.113109
+Specific conductance           Ridge     19 61045 -0.957693 519.012696
+Specific conductance     Elastic Net     19 61045 -0.975982 521.431451
+Specific conductance             OLS     19 61045 -1.035602 529.239451
+Finished.
+===== part: pH =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/daymet_parts/base/ph
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Daymet (baseline): rows restricted to node-hours with Daymet features
+  Water temperature      stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  DO concentration       stations 15 | rows  53,398 | rows per station min 701, median 2,185
+  Specific conductance   stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  pH                     stations 15 | rows  52,668 | rows per station min 1,535, median 2,185
+  Turbidity              stations 13 | rows  45,067 | rows per station min 635, median 2,183
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['pH']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: pH
+================================================================================
+
+Target: pH
+Nodes: 15
+Rows: 52,668
+Feature candidates: 9
+Outer fold 1/15 | test 67739434Outer fold 2/15 | test 81497938Outer fold 3/15 | test 82982643Outer fold 4/15 | test 83027786Outer fold 5/15 | test 83222751Outer fold 6/15 | test 88786999Outer fold 7/15 | test 90706215Outer fold 8/15 | test 93300040Outer fold 9/15 | test 93392084Outer fold 10/15 | test 96496279Outer fold 11/15 | test 97532807Outer fold 12/15 | test 126377584Outer fold 13/15 | test 131520862Outer fold 14/15 | test 186559442Outer fold 15/15 | test 203177183
+
+Saved: pH
+Target           Model  Nodes  Rows        R2     RMSE
+    pH     Elastic Net     15 52668 -0.082192 0.230489
+    pH           Dummy     15 52668 -0.082192 0.230489
+    pH           Ridge     15 52668 -0.126917 0.235203
+    pH Graph-Laplacian     15 52668 -0.172342 0.239897
+    pH             OLS     15 52668 -0.215412 0.244264
+    pH      Spline GAM     15 52668 -0.457924 0.267525
+Target           Model  Nodes  Rows        R2     RMSE
+    pH     Elastic Net     15 52668 -0.082192 0.230489
+    pH           Dummy     15 52668 -0.082192 0.230489
+    pH           Ridge     15 52668 -0.126917 0.235203
+    pH Graph-Laplacian     15 52668 -0.172342 0.239897
+    pH             OLS     15 52668 -0.215412 0.244264
+    pH      Spline GAM     15 52668 -0.457924 0.267525
+Saved master metrics.
+Prediction rows: 316,008
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+target           model          features  outer_folds
+    pH           Dummy        configured           15
+    pH     Elastic Net        configured           15
+    pH Graph-Laplacian     K=2 | reduced           11
+    pH Graph-Laplacian     K=1 | reduced            1
+    pH Graph-Laplacian K=4 | local_slope            1
+    pH Graph-Laplacian        K=4 | none            1
+    pH Graph-Laplacian     K=4 | reduced            1
+    pH             OLS        configured           13
+    pH             OLS        K=2 | none            1
+    pH             OLS        K=4 | none            1
+    pH           Ridge        configured           11
+    pH           Ridge        K=2 | none            3
+    pH           Ridge        K=4 | none            1
+    pH      Spline GAM        configured           11
+    pH      Spline GAM     K=1 | reduced            2
+    pH      Spline GAM        K=4 | none            1
+    pH      Spline GAM     K=4 | reduced            1
+Saved configs.
+
+R2 TABLE
+
+Model      Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                        
+pH     -0.082192    -0.082192        -0.172342 -0.215412 -0.126917   -0.457924
+
+RMSE TABLE
+
+Model      Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                        
+pH      0.230489     0.230489         0.239897  0.244264  0.235203    0.267525
+
+BEST CONVENTIONAL MODELS
+
+Target       Model  Nodes  Rows        R2     RMSE
+    pH Elastic Net     15 52668 -0.082192 0.230489
+
+================================================================================
+pH
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+{'alpha': 10.0}           15
+
+ Elastic Net
+                      Parameters  Outer folds
+ {'alpha': 0.1, 'l1_ratio': 0.5}           12
+{'alpha': 1.0, 'l1_ratio': 0.75}            3
+
+ Spline GAM
+                   Parameters  Outer folds
+{'n_knots': 6, 'alpha': 10.0}           13
+ {'n_knots': 6, 'alpha': 1.0}            2
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+Target           Model  Nodes  Rows        R2     RMSE
+    pH     Elastic Net     15 52668 -0.082192 0.230489
+    pH           Dummy     15 52668 -0.082192 0.230489
+    pH           Ridge     15 52668 -0.126917 0.235203
+    pH Graph-Laplacian     15 52668 -0.172342 0.239897
+    pH             OLS     15 52668 -0.215412 0.244264
+    pH      Spline GAM     15 52668 -0.457924 0.267525
+Finished.
+===== part: Turbidity =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/daymet_parts/base/turbidity
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Daymet (baseline): rows restricted to node-hours with Daymet features
+  Water temperature      stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  DO concentration       stations 15 | rows  53,398 | rows per station min 701, median 2,185
+  Specific conductance   stations 19 | rows  61,045 | rows per station min 363, median 2,183
+  pH                     stations 15 | rows  52,668 | rows per station min 1,535, median 2,185
+  Turbidity              stations 13 | rows  45,067 | rows per station min 635, median 2,183
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Turbidity']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+
+Target: Turbidity
+Nodes: 13
+Rows: 45,067
+Feature candidates: 9
+Outer fold 1/13 | test 67739434Outer fold 2/13 | test 81497938Outer fold 3/13 | test 82982643Outer fold 4/13 | test 83027786Outer fold 5/13 | test 83222751Outer fold 6/13 | test 88786999Outer fold 7/13 | test 90706215Outer fold 8/13 | test 93300040Outer fold 9/13 | test 93392084Outer fold 10/13 | test 96496279Outer fold 11/13 | test 97532807Outer fold 12/13 | test 126377584Outer fold 13/13 | test 131520862
+
+Saved: Turbidity
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     13 45067  0.011876 369.122337
+Turbidity Graph-Laplacian     13 45067 -0.000006 371.334926
+Turbidity           Ridge     13 45067 -0.014493 374.015168
+Turbidity           Dummy     13 45067 -0.014626 374.039532
+Turbidity     Elastic Net     13 45067 -0.016157 374.321763
+Turbidity             OLS     13 45067 -0.039163 378.535333
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     13 45067  0.011876 369.122337
+Turbidity Graph-Laplacian     13 45067 -0.000006 371.334926
+Turbidity           Ridge     13 45067 -0.014493 374.015168
+Turbidity           Dummy     13 45067 -0.014626 374.039532
+Turbidity     Elastic Net     13 45067 -0.016157 374.321763
+Turbidity             OLS     13 45067 -0.039163 378.535333
+Saved master metrics.
+Prediction rows: 270,402
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+   target           model          features  outer_folds
+Turbidity           Dummy        configured           13
+Turbidity     Elastic Net        K=4 | none           12
+Turbidity     Elastic Net     K=4 | reduced            1
+Turbidity Graph-Laplacian        K=4 | none           12
+Turbidity Graph-Laplacian     K=4 | reduced            1
+Turbidity             OLS        K=4 | none           12
+Turbidity             OLS     K=4 | reduced            1
+Turbidity           Ridge        K=4 | none           12
+Turbidity           Ridge     K=4 | reduced            1
+Turbidity      Spline GAM        K=4 | none           10
+Turbidity      Spline GAM     K=4 | reduced            2
+Turbidity      Spline GAM K=4 | local_slope            1
+Saved configs.
+
+R2 TABLE
+
+Model         Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                           
+Turbidity -0.014626    -0.016157        -0.000006 -0.039163 -0.014493    0.011876
+
+RMSE TABLE
+
+Model           Dummy  Elastic Net  Graph-Laplacian         OLS       Ridge  Spline GAM
+Target                                                                                 
+Turbidity  374.039532   374.321763       371.334926  378.535333  374.015168  369.122337
+
+BEST CONVENTIONAL MODELS
+
+   Target      Model  Nodes  Rows       R2       RMSE
+Turbidity Spline GAM     13 45067 0.011876 369.122337
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+    Parameters  Outer folds
+{'alpha': 1.0}            9
+{'alpha': 3.0}            4
+
+ Elastic Net
+                      Parameters  Outer folds
+ {'alpha': 0.1, 'l1_ratio': 0.5}            9
+{'alpha': 1.0, 'l1_ratio': 0.75}            4
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 6, 'alpha': 1.0}           10
+{'n_knots': 6, 'alpha': 10.0}            3
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     13 45067  0.011876 369.122337
+Turbidity Graph-Laplacian     13 45067 -0.000006 371.334926
+Turbidity           Ridge     13 45067 -0.014493 374.015168
+Turbidity           Dummy     13 45067 -0.014626 374.039532
+Turbidity     Elastic Net     13 45067 -0.016157 374.321763
+Turbidity             OLS     13 45067 -0.039163 378.535333
+Finished.
+merged 5 targets into results/benchmark_results_daymet_base: 30 metric rows, 1,639,338 prediction rows
+Finished.
