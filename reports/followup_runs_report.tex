@@ -28,7 +28,7 @@
 This report continues \code{kron\_vs\_full\_laplacian\_report.pdf} (the ``main report'') and collects
 the benchmark runs made after it. Every run is a paired comparison against the leave-one-station-out
 (LOO) benchmark of the main report (its Table~\ref{tab:base} values are repeated here), on identical
-test rows. So far it covers four runs. (1) Water-year indicators on the current rows change no
+test rows. So far it covers five runs. (1) Water-year indicators on the current rows change no
 target reliably except turbidity, where every linear model gains about $0.06$ and the graph model
 $0.08$; pH gets worse for Elastic Net and the Spline GAM. (2) With the longer 2021--2026 history,
 the water-year indicators remove the $1$\,\textdegree C cold offset found in the main report, but
@@ -38,7 +38,10 @@ present, so specific conductance and pH get much worse. (3) Gradient boosting ch
 neighbour reading for pH and turbidity only, and gains nothing reliable. (4) Hourly upstream rainfall
 from NOAA MRMS radar is chosen by the inner loop in almost every fold but adds at most about $0.01$
 (DO, graph and two linear models) and does not help turbidity; rain sampled at the 67 nodes of the
-compressed graph does as well as rain along the whole upstream river.
+compressed graph does as well as rain along the whole upstream river. (5) Daily Daymet
+precipitation at the station, available for 2025 only and so tested on the $30\%$ of rows it covers,
+adds nothing reliable for any target and is slightly worse than MRMS upstream rain for DO and water
+temperature in the graph model.
 \end{abstract}
 
 % =====================================================================
@@ -399,6 +402,119 @@ Turbidity     & Graph-Laplacian & $0.104$ & $-0.011$ & ($-0.10$, $0.02$) & $-0.0
 \end{itemize}
 
 % =====================================================================
+\section{Daymet precipitation at the station}\label{sec:daymet}
+
+\paragraph{Data.} A second precipitation source, prepared and cleaned by the author: daily Daymet
+precipitation (1\,km gridded, from gauges) at each water-quality station's own coordinates, for
+calendar 2025 (\code{data/rain/daymet\_daily\_2025.csv} and \code{daymet\_features\_2025.csv}, 28
+stations on 26 graph nodes). Daymet differs from the MRMS features of Section~\ref{sec:rain} in three
+ways at once: the source (gauge interpolation instead of radar), the place (at the station instead of
+averaged over the river upstream) and the time scale (daily windows up to 30 days instead of hourly
+windows up to 7 days). So the comparison below is between two precipitation feature sets, not a clean
+comparison of the two sources. Daymet includes snowfall as water equivalent, and Oct--Dec is the
+wettest quarter of the file (73\,mm against 45--49\,mm in the others), so much of it is snow at the
+upper stations.
+
+\paragraph{Features.} \code{build\_daymet\_features.py} takes five columns of the cleaned file, fixed
+in advance: $\log(1+\text{mm})$ summed over the $1$, $3$, $7$ and $30$ days before the date, and
+$\log(1+\mathrm{API})$, with the antecedent precipitation index
+$\mathrm{API}(d)=0.8\,\mathrm{API}(d-1)+0.2\,P(d-1)$. Every window holds only earlier days (checked
+against the daily file). Each hourly row takes the features of its local date (UTC $-7$\,h), so
+every window ends before the reading. Two nodes hold two nearby stations each and take their mean.
+Daymet \code{dm\_7d} correlates $0.80$ with MRMS \code{rain\_168h}. Within a station, $\log(1+\text{turbidity})$
+correlates $0.36$ with \code{dm\_3d} and $0.33$ with MRMS \code{rain\_72h} (medians over stations).
+
+\paragraph{Rows.} The file covers 2025 only, but most stations' benchmark year runs from October 2025
+to October 2026. Only $30\%$ of the benchmark rows (local dates 31 January to 31 December 2025, when
+the 30-day window is complete) have Daymet features: 20 of the 26 nodes, five of them for most of
+the year and the other 15 for October--December only. \code{BENCHMARK\_DAYMET} keeps these rows
+only, and three arms were run on exactly the same rows: no precipitation (\code{baseline}), MRMS
+upstream rain on the uncompressed graph (\code{baseline} with \code{BENCHMARK\_RAIN=uncompressed}),
+and Daymet (\code{on}). The Daymet and MRMS columns are offered with and without every feature
+candidate, and the inner loop chooses, as before. That leaves 19 stations for water temperature and
+specific conductance, 15 for DO and pH and 13 for turbidity, mostly with about three months each.
+These $R^2$ values are not comparable with Table~\ref{tab:base}: the sample is a different, shorter
+and harder one (turbidity $R^2$ is about $0$ and pH below $0$ for every model even without
+precipitation). Only the paired differences in Table~\ref{tab:daymet} are meaningful.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Daymet and MRMS precipitation on the 2025 rows with Daymet features: paired $\Delta R^2$ of
+MRMS upstream rain and of Daymet against no precipitation, and of Daymet against MRMS. Base: $R^2$
+without precipitation on these rows. Folds: outer folds whose chosen candidate included precipitation
+(MRMS/Daymet).}
+\label{tab:daymet}
+\scriptsize
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{ll r rc rc rc c}
+\toprule
+ & & & \multicolumn{2}{c}{MRMS vs none} & \multicolumn{2}{c}{Daymet vs none} & \multicolumn{2}{c}{Daymet vs MRMS} & \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Target & Model & Base & $\Delta R^2$ & Interval & $\Delta R^2$ & Interval & $\Delta R^2$ & Interval & Folds \\
+\midrule
+Water temp.   & Graph-Laplacian & $0.876$ & $\mathbf{+0.002}$ & ($0.00$, $0.01$) & $-0.003$ & ($-0.01$, $0.00$) & $\mathbf{-0.006}$ & ($-0.01$, $-0.00$) & 17/2 of 19 \\
+              & OLS             & $0.885$ & $0.000$ & ($-0.00$, $0.00$) & $-0.002$ & ($-0.01$, $0.00$) & $-0.002$ & ($-0.01$, $0.00$) & 19/1 of 19 \\
+              & Ridge           & $0.886$ & $0.000$ & ($-0.00$, $0.00$) & $-0.002$ & ($-0.01$, $0.00$) & $-0.002$ & ($-0.01$, $0.00$) & 18/1 of 19 \\
+              & Elastic Net     & $0.885$ & $+0.001$ & ($-0.00$, $0.00$) & $-0.002$ & ($-0.01$, $0.00$) & $\mathbf{-0.003}$ & ($-0.01$, $-0.00$) & 19/4 of 19 \\
+              & Spline GAM      & $0.849$ & $0.000$ & ($-0.00$, $0.00$) & $\mathbf{-0.007}$ & ($-0.02$, $-0.00$) & $-0.007$ & ($-0.02$, $0.00$) & 5/7 of 19 \\
+\addlinespace
+DO            & Graph-Laplacian & $0.741$ & $\mathbf{+0.007}$ & ($0.00$, $0.01$) & $-0.001$ & ($-0.01$, $0.00$) & $\mathbf{-0.008}$ & ($-0.02$, $-0.00$) & 15/12 of 15 \\
+              & OLS             & $0.727$ & $+0.003$ & ($-0.01$, $0.02$) & $+0.027$ & ($-0.01$, $0.08$) & $+0.024$ & ($-0.02$, $0.09$) & 15/13 of 15 \\
+              & Ridge           & $0.721$ & $-0.006$ & ($-0.02$, $0.00$) & $-0.001$ & ($-0.00$, $0.00$) & $+0.005$ & ($0.00$, $0.01$) & 2/1 of 15 \\
+              & Elastic Net     & $0.716$ & $-0.002$ & ($-0.01$, $0.00$) & $-0.003$ & ($-0.01$, $0.00$) & $-0.001$ & ($-0.00$, $0.00$) & 2/3 of 15 \\
+              & Spline GAM      & $0.682$ & $0.000$ & -- & $0.000$ & -- & $0.000$ & -- & 0/0 of 15 \\
+\addlinespace
+Spec.\ cond.  & Graph-Laplacian & $0.276$ & $-0.003$ & ($-0.01$, $0.00$) & $+0.005$ & ($-0.01$, $0.03$) & $+0.008$ & ($-0.00$, $0.03$) & 15/17 of 19 \\
+              & OLS             & $-1.036$ & $0.000$ & -- & $0.000$ & -- & $0.000$ & -- & 0/0 of 19 \\
+              & Ridge           & $-0.958$ & $0.000$ & -- & $0.000$ & -- & $0.000$ & -- & 0/0 of 19 \\
+              & Elastic Net     & $-0.976$ & $0.000$ & -- & $0.000$ & -- & $0.000$ & -- & 0/0 of 19 \\
+              & Spline GAM      & $-0.140$ & $-0.044$ & ($-0.20$, $0.00$) & $-0.177$ & ($-0.83$, $0.00$) & $-0.133$ & ($-0.62$, $0.00$) & 1/1 of 19 \\
+\addlinespace
+pH            & Graph-Laplacian & $-0.172$ & $-0.022$ & ($-0.15$, $0.03$) & $-0.030$ & ($-0.19$, $0.04$) & $-0.008$ & ($-0.05$, $0.02$) & 12/9 of 15 \\
+              & OLS             & $-0.215$ & $-0.037$ & ($-0.13$, $0.00$) & $-0.035$ & ($-0.09$, $0.00$) & $+0.002$ & ($-0.05$, $0.11$) & 2/1 of 15 \\
+              & Ridge           & $-0.127$ & $-0.021$ & ($-0.07$, $0.00$) & $-0.019$ & ($-0.04$, $0.00$) & $+0.003$ & ($-0.02$, $0.06$) & 2/2 of 15 \\
+              & Elastic Net     & $-0.082$ & $0.000$ & -- & $0.000$ & -- & $0.000$ & -- & 0/0 of 15 \\
+              & Spline GAM      & $-0.458$ & $-0.075$ & ($-0.29$, $0.00$) & $-0.061$ & ($-0.19$, $0.02$) & $+0.014$ & ($-0.04$, $0.12$) & 7/9 of 15 \\
+\addlinespace
+Turbidity     & Graph-Laplacian & $0.000$ & $+0.041$ & ($-0.12$, $0.11$) & $-0.013$ & ($-0.44$, $0.11$) & $-0.055$ & ($-0.34$, $0.02$) & 13/13 of 13 \\
+              & OLS             & $-0.039$ & $+0.003$ & ($-0.23$, $0.10$) & $+0.013$ & ($-0.29$, $0.10$) & $+0.010$ & ($-0.08$, $0.05$) & 13/13 of 13 \\
+              & Ridge           & $-0.014$ & $+0.020$ & ($-0.15$, $0.10$) & $+0.028$ & ($-0.21$, $0.10$) & $+0.008$ & ($-0.08$, $0.05$) & 13/13 of 13 \\
+              & Elastic Net     & $-0.016$ & $+0.027$ & ($-0.13$, $0.11$) & $+0.025$ & ($-0.22$, $0.09$) & $-0.003$ & ($-0.10$, $0.04$) & 13/13 of 13 \\
+              & Spline GAM      & $0.012$ & $-0.022$ & ($-0.13$, $0.04$) & $+0.092$ & ($-0.02$, $0.25$) & $+0.114$ & ($-0.00$, $0.29$) & 11/12 of 13 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Daymet adds nothing reliable.} Against no precipitation, no interval for any model
+        and target lies above zero; the only interval that excludes zero is a loss ($-0.007$, water
+        temperature, Spline GAM). The inner loop picks Daymet for DO, specific conductance and pH in
+        the graph model in most folds, but rarely for water temperature (1--7 of 19 folds), where
+        every model but the Spline GAM picks MRMS in almost every fold.
+  \item \textbf{MRMS repeats its small DO gain.} On these rows the graph model again gains with MRMS
+        rain for DO ($+0.007$, 10 of 15 stations better; $+0.012$ on the full rows,
+        Section~\ref{sec:rain}) and slightly for water temperature ($+0.002$). Paired directly,
+        Daymet is worse than MRMS for the graph model for DO ($-0.008$, 13 of 15 stations worse) and
+        water temperature ($-0.006$), and for Elastic Net for water temperature ($-0.003$), all
+        small. Upstream hourly rain is the more useful of the two feature sets for these targets.
+  \item \textbf{Turbidity: precipitation is chosen everywhere, but the gains rest on one station.} On
+        these rows every linear model chooses precipitation in all 13 folds, with either source
+        (on the full rows the linear models never chose MRMS rain). The changes are positive for
+        most models but none is reliable. The largest, Daymet with the Spline GAM ($+0.092$, 8
+        stations better, 4 worse), comes $81\%$ from one station, 09163500 (Colorado River near the
+        Colorado--Utah state line); the graph model's MRMS gain ($+0.041$) comes mostly from the
+        same station and 09095500. With 13 stations and about three months each, this is not
+        evidence either way.
+  \item \textbf{The other larger changes are single stations.} OLS gains $0.027$ for DO with Daymet,
+        all of it at 09380000 (Colorado River at Lees Ferry, below Glen Canyon Dam), whose DO is set
+        by the reservoir release rather than local precipitation. The pH losses of the graph model
+        (about $-0.02$ to $-0.03$ with both sources) and the Spline GAM's specific-conductance loss
+        with Daymet ($-0.177$) come from 09510000 (Verde River below Bartlett Dam).
+\end{itemize}
+
+
+% =====================================================================
 \section{Conclusions so far}
 
 \begin{enumerate}
@@ -417,6 +533,10 @@ Turbidity     & Graph-Laplacian & $0.104$ & $-0.011$ & ($-0.10$, $0.02$) & $-0.0
         reliable gains are about $0.01$ for DO; turbidity, the target that rain should help most, does
         not improve for the graph or linear models. Sampling rain at the compressed graph's 67 nodes
         is as good as sampling it along every upstream cell.
+  \item \textbf{Daymet precipitation at the station adds nothing reliable} on the 2025 rows it
+        covers, and is slightly worse than MRMS upstream rain for DO and water temperature in the
+        graph model. Turbidity gains with either source rest on one station. A full test needs
+        Daymet for the whole October 2025 -- October 2026 window.
   \item The main benchmark (Table~\ref{tab:base}) remains the reference.
 \end{enumerate}
 
@@ -447,6 +567,12 @@ with the same six models, saved in \code{results/benchmark\_results\_rain\_uncom
 (\code{data/benchmark\_data/rain\_features\_*.pkl}). Their comparisons are
 \code{results/rain\_uncompressed\_vs\_base\_*.csv}, \code{results/rain\_compressed\_vs\_base\_*.csv} and
 \code{results/rain\_compressed\_vs\_uncompressed\_*.csv}.
+The Daymet runs use \code{BENCHMARK\_DAYMET=baseline|on} (the MRMS arm with
+\code{BENCHMARK\_RAIN=uncompressed}) at commit \code{9950b6c}, from \code{run\_daymet\_parallel.sh}
+with the same six models, saved in \code{results/benchmark\_results\_daymet\_base|mrms|on/}
+(server logs \code{daymet\_*.log}); the features come from \code{build\_daymet\_features.py}
+(\code{data/benchmark\_data/daymet\_features.pkl}). Their comparisons are
+\code{results/daymet\_mrms\_vs\_base|on\_vs\_base|on\_vs\_mrms\_*.csv}.
 The error decomposition and the coverage table come from \code{year\_effect\_analysis.py} (seconds),
 saved in \code{results/year\_effect\_diagnostics.csv} and \code{results/history\_coverage\_by\_wy.csv}.
 
