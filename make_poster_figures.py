@@ -28,7 +28,7 @@ OUT = Path("reports/figures")
 # validated reference palette (light mode): three categorical slots, all-pairs safe
 GRAPH, RIDGE, GB = "#2a78d6", "#eb6834", "#1baf7a"
 INK, INK2, MUTED = "#0b0b0b", "#52514e", "#898781"
-GRID, AXIS, SURFACE, CONTEXT = "#e1e0d9", "#c3c2b7", "#fcfcfb", "#b9b8b1"
+GRID, AXIS, SURFACE, CONTEXT = "#e1e0d9", "#c3c2b7", "white", "#9a9993"
 DIV_NEG, DIV_MID, DIV_POS = "#e34948", "#dcdbd5", "#2a78d6"   # red <- gray -> blue
 
 TARGETS = ["Water temperature", "DO concentration", "Specific conductance", "pH"]
@@ -39,14 +39,16 @@ MLABEL = {"Graph-Laplacian": "Graph-Laplacian", "Graph-Laplacian + GB": "Graph +
           "Elastic Net": "Elastic net", "Spline GAM": "Spline GAM", "OLS": "OLS",
           "Ridge": "Ridge", "Dummy": "Training mean"}
 
+FS = 1.6   # font scale: the poster prints these figures at about 0.8x, so sizes are enlarged
+
 mpl.rcParams.update({
     "font.family": ["Helvetica", "Arial", "DejaVu Sans"],
-    "font.size": 13, "axes.titlesize": 15, "axes.labelsize": 13,
-    "xtick.labelsize": 12, "ytick.labelsize": 12,
+    "font.size": 13 * FS, "axes.titlesize": 15 * FS, "axes.labelsize": 13 * FS,
+    "xtick.labelsize": 12 * FS, "ytick.labelsize": 12 * FS,
     "axes.edgecolor": AXIS, "axes.linewidth": 1.0, "axes.labelcolor": INK2,
     "xtick.color": MUTED, "ytick.color": MUTED, "xtick.labelcolor": INK2, "ytick.labelcolor": INK2,
     "axes.spines.top": False, "axes.spines.right": False,
-    "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
+    "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white",
     "pdf.fonttype": 42, "lines.solid_capstyle": "round", "lines.solid_joinstyle": "round",
 })
 
@@ -59,9 +61,9 @@ def save(fig, name):
     print("wrote", OUT / f"{name}.png", "and .pdf")
 
 
-def title(fig, main, sub):
-    fig.text(0.0, 1.04, main, fontsize=19, fontweight="bold", color=INK, transform=fig.transFigure)
-    fig.text(0.0, 1.0, sub, fontsize=13, color=INK2, transform=fig.transFigure)
+# the six comparison models, one grey marker shape each (results figure)
+MARK = {"OLS": "s", "Ridge": "D", "Elastic Net": "^", "Spline GAM": "v",
+        "Random Forest": "P", "Gradient Boosting": "X"}
 
 
 # ---------------------------------------------------------------------------
@@ -77,24 +79,25 @@ def fig_models(sc):
         g = row["Graph-Laplacian"]
         lo, hi = min(others.min(), g), max(others.max(), g)
         ax.hlines(yi, lo, hi, color=GRID, lw=2, zorder=1)
-        ax.scatter(others, [yi] * len(others), s=70, color=CONTEXT, edgecolor=SURFACE, lw=2, zorder=2)
+        for m, v in others.items():
+            ax.scatter([v], [yi], s=130, marker=MARK[m], color=CONTEXT, edgecolor=SURFACE, lw=1.5, zorder=2)
         ax.scatter([g], [yi], s=150, color=GRAPH, edgecolor=SURFACE, lw=2, zorder=4)
         best = others.idxmax()
         ax.annotate(f"{g:.2f}", (g, yi), xytext=(0, 12), textcoords="offset points",
-                    ha="center", va="bottom", fontsize=12, fontweight="bold", color=INK)
+                    ha="center", va="bottom", fontsize=12 * FS, fontweight="bold", color=INK)
         ax.annotate(f"best other: {MLABEL[best]} {others.max():.2f}", (others.max(), yi),
                     xytext=(0, -13), textcoords="offset points", ha="center", va="top",
-                    fontsize=10.5, color=INK2)
+                    fontsize=10.5 * FS, color=INK2)
         lead = g - others.max()
         ax.annotate("0.00" if abs(lead) < 0.005 else f"{lead:+.2f}", (1.0, yi), xycoords=("axes fraction", "data"), xytext=(14, 0),
                     textcoords="offset points", ha="left", va="center", annotation_clip=False,
-                    fontsize=12.5, fontweight="bold" if lead > 0.05 else "normal",
+                    fontsize=12.5 * FS, fontweight="bold" if lead > 0.05 else "normal",
                     color=INK if lead > 0.05 else MUTED)
     ax.annotate("graph lead", (1.0, 1.0), xycoords="axes fraction", xytext=(14, 2),
-                textcoords="offset points", ha="left", va="bottom", fontsize=10.5, color=MUTED,
+                textcoords="offset points", ha="left", va="bottom", fontsize=10.5 * FS, color=MUTED,
                 annotation_clip=False)
     ax.set_yticks(y, [TLABEL[t] for t in TARGETS])
-    ax.tick_params(axis="y", length=0, labelsize=13, labelcolor=INK)
+    ax.tick_params(axis="y", length=0, labelsize=13 * FS, labelcolor=INK)
     ax.set_xlim(-0.35, 1.0)
     ax.set_ylim(-0.6, len(TARGETS) - 0.35)
     ax.set_xlabel("R² at a held-out station (leave one station out, 17–24 stations per target)")
@@ -103,29 +106,25 @@ def fig_models(sc):
     ax.spines["left"].set_visible(False)
     ax.annotate("← worse than predicting the mean", (0, 1.0), xycoords=("data", "axes fraction"),
                 xytext=(-6, 2), textcoords="offset points", ha="right", va="bottom",
-                fontsize=10, color=MUTED, annotation_clip=False)
-    handles = [plt.Line2D([], [], ls="", marker="o", ms=11, color=GRAPH, mec=SURFACE, label="Graph-Laplacian model"),
-               plt.Line2D([], [], ls="", marker="o", ms=8, color=CONTEXT, mec=SURFACE,
-                          label="Six other models: OLS, Ridge, elastic net, spline GAM, random forest, gradient boosting")]
-    fig.subplots_adjust(top=0.83)
-    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.0, 0.905), ncol=2, frameon=False,
-               fontsize=10.5, handletextpad=0.3, columnspacing=1.5)
-    title(fig, "The river-network term pays off for salinity and pH",
-          "R² of each model for each water-quality target: the graph model leads by 0.36 on "
-          "specific conductance and 0.09 on pH")
+                fontsize=10 * FS, color=MUTED, annotation_clip=False)
+    handles = [plt.Line2D([], [], ls="", marker="o", ms=14, color=GRAPH, mec=SURFACE, label="Graph-Laplacian (ours)")]
+    handles += [plt.Line2D([], [], ls="", marker=MARK[m], ms=11, color=CONTEXT, mec=SURFACE, label=MLABEL[m])
+                for m in MARK]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=4, frameon=False,
+               fontsize=10.5 * FS, handletextpad=0.2, columnspacing=1.2)
     save(fig, "poster_1_models")
 
 
 # ---------------------------------------------------------------------------
 def fig_splits(sc):
     splits = ["loo", "station_repeated", "subbasin"]
-    xl = ["1 station", "3 stations", "Whole\nsubbasin"]
+    xl = ["1", "3", "Sub-\nbasin"]
     panels = ["Water temperature", "Specific conductance", "pH"]
     # drawn in this order: graph last, on top; Ridge wider underneath so a tie still shows both
-    series = [("Ridge", RIDGE, "Ridge", 5.0), ("Gradient Boosting", GB, "Gradient boosting", 2.5),
-              ("Graph-Laplacian", GRAPH, "Graph-Laplacian", 2.5)]
+    series = [("Ridge", RIDGE, "Ridge", 5.0), ("Gradient Boosting", GB, "GB", 2.5),
+              ("Graph-Laplacian", GRAPH, "Graph", 2.5)]
     w = sc.pivot_table(index=["target", "model"], columns="split", values="R2")
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5.6), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6.2), sharey=True)
     for ax, t in zip(axes, panels):
         ax.axhline(0, color=AXIS, lw=1, zorder=1)
         ax.yaxis.grid(True, color=GRID, lw=1)
@@ -142,35 +141,32 @@ def fig_splits(sc):
             groups.setdefault(val, []).append((lab, c))
         placed = []
         for val in sorted(groups):
-            labs = sorted(groups[val], key=lambda x: x[0] != "Graph-Laplacian")
+            labs = sorted(groups[val], key=lambda x: x[0] != "Graph")
             ypos = val
             for pv in placed:
-                if abs(ypos - pv) < 0.12:
-                    ypos = pv + 0.12
+                if abs(ypos - pv) < 0.17:
+                    ypos = pv + 0.17
             placed.append(ypos)
-            ax.annotate(" = ".join(l.replace("Graph-Laplacian", "Graph") if len(labs) > 1 else l for l, _ in labs) + f"  {val:.2f}", (2, val), xytext=(2.15, ypos),
-                        textcoords="data", va="center", ha="left", fontsize=11, color=INK,
+            ax.annotate(" = ".join(l for l, _ in labs) + f" {val:.2f}", (2, val), xytext=(2.15, ypos),
+                        textcoords="data", va="center", ha="left", fontsize=11 * FS, color=INK,
                         arrowprops=dict(arrowstyle="-", color=labs[0][1], lw=1.2, shrinkA=0, shrinkB=5))
         g0 = w.loc[(t, "Graph-Laplacian"), "loo"]
         ax.annotate(f"{g0:.2f}", (0, g0), xytext=(-10, 0), textcoords="offset points",
-                    ha="right", va="center", fontsize=11, fontweight="bold", color=INK)
+                    ha="right", va="center", fontsize=11 * FS, fontweight="bold", color=INK)
         ax.set_title(TLABEL[t], loc="left", fontweight="bold", color=INK, pad=10)
         ax.set_xticks(range(3), xl)
-        ax.tick_params(axis="x", length=0, labelsize=11.5)
-        ax.set_xlabel("Held out together", fontsize=11, color=MUTED)
-        ax.set_xlim(-0.4, 4.1)
+        ax.tick_params(axis="x", length=0, labelsize=11.5 * FS)
+        ax.set_xlabel("Stations held out together", fontsize=11 * FS, color=MUTED)
+        ax.set_xlim(-0.35, 4.45)
         ax.spines["left"].set_visible(ax is axes[0])
     axes[0].set_ylabel("R² at held-out stations")
     axes[0].set_ylim(-1.3, 1.0)
-    axes[0].text(2.15, 0.03, "predicting the mean", fontsize=9.5, color=MUTED, va="bottom", ha="left")
-    handles = [plt.Line2D([], [], color=c, lw=2.5, marker="o", ms=7, mec=SURFACE, mew=1.5, label=lab)
-               for _, c, lab, _ in series[::-1]]
-    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.0, 0.93), ncol=3, frameon=False,
-               fontsize=11.5)
-    fig.subplots_adjust(wspace=0.25, top=0.84)
-    title(fig, "Network skill is local: it fades as neighbours are removed",
-          "Specific conductance: the graph model's lead holds with 3 stations out, "
-          "but vanishes when its whole subbasin is held out")
+    axes[0].text(0.0, 0.03, "predicting the mean", fontsize=9.5 * FS, color=MUTED, va="bottom", ha="left")
+    handles = [plt.Line2D([], [], color=c, lw=2.5, marker="o", ms=7, mec=SURFACE, mew=1.5, label=MLABEL[m])
+               for m, c, _, _ in series[::-1]]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.96), ncol=3, frameon=False,
+               fontsize=11.5 * FS)
+    fig.subplots_adjust(wspace=0.12, top=0.84)
     save(fig, "poster_2_splits")
 
 
@@ -211,17 +207,18 @@ def fig_map():
             "Blue Mesa": (38.4528, -107.3358)}
     for name, (la, lo) in dams.items():
         ax.scatter(lo, la, marker="^", s=60, color=INK2, edgecolor=SURFACE, lw=1.5, zorder=3)
-    for name in ["Glen Canyon", "Hoover", "Flaming Gorge"]:
+    for name, off, ha in [("Glen Canyon", (0, -10), "center"), ("Hoover", (7, -2), "left"),
+                          ("Flaming Gorge", (7, -2), "left")]:
         la, lo = dams[name]
-        ax.annotate(f"{name} Dam", (lo, la), xytext=(7, -2), textcoords="offset points",
-                    fontsize=9.5, color=INK2, ha="left", va="top")
+        ax.annotate(f"{name} Dam", (lo, la), xytext=off, textcoords="offset points",
+                    fontsize=9.5 * FS, color=INK2, ha=ha, va="top")
 
     cmap = LinearSegmentedColormap.from_list("div", [DIV_NEG, DIV_MID, DIV_POS])
     norm = TwoSlopeNorm(vmin=-2, vcenter=0, vmax=2)
     pts = pd.DataFrame({"node": ratio.index, "v": ratio.clip(-2, 2).to_numpy()})
     pts["lon"] = [G.nodes[n]["longitude"] for n in pts.node]
     pts["lat"] = [G.nodes[n]["latitude"] for n in pts.node]
-    sc_ = ax.scatter(pts.lon, pts.lat, c=pts.v, cmap=cmap, norm=norm, s=150, edgecolor=SURFACE,
+    sc_ = ax.scatter(pts.lon, pts.lat, c=pts.v, cmap=cmap, norm=norm, s=230, edgecolor=SURFACE,
                      lw=2, zorder=5)
     # subbasin labels with the graph model's LOO R2 within the subbasin
     pts["sub"] = pts.node.astype(str).map(subb)
@@ -230,7 +227,7 @@ def fig_map():
              "Lower Colorado + Verde": (-111.25, 35.2, "left")}
     for s_, (x, yv, ha) in where.items():
         extra = "\nall 3 stations below dams" if s_.startswith("Lower") else ""
-        ax.text(x, yv, f"{s_}\nR² {gloo[s_]:.2f}{extra}", fontsize=11.5, color=INK, ha=ha, va="center",
+        ax.text(x, yv, f"{s_}\nR² {gloo[s_]:.2f}{extra}", fontsize=11.5 * FS, color=INK, ha=ha, va="center",
                 fontweight="bold", linespacing=1.3, zorder=6)
     ax.set_xlim(-115.5, -104.4)
     ax.set_ylim(31.6, 42.3)
@@ -242,14 +239,11 @@ def fig_map():
                       ticks=[-2, -1, 0, 1, 2])
     cb.ax.set_xticklabels(["≥4× higher", "2× higher", "same", "2× lower", "≥4× lower"])
     cb.outline.set_visible(False)
-    cb.ax.tick_params(length=0, labelsize=11, labelcolor=INK2)
+    cb.ax.tick_params(length=0, labelsize=11 * FS, labelcolor=INK2)
     cb.set_label("Graph model's specific-conductance error vs Ridge, per station (leave one station out)",
-                 color=INK2, fontsize=11.5)
+                 color=INK2, fontsize=11.5 * FS)
     ax.scatter([], [], marker="^", s=60, color=INK2, label="Major dam")
-    ax.legend(loc="upper left", frameon=False, fontsize=11)   # empty corner, clear of the river
-    title(fig, "Where the network helps: salinity in the upper basin",
-          "Blue stations: the graph model's error is lower than Ridge's. Labels give its R² "
-          "within each subbasin.")
+    ax.legend(loc="upper left", frameon=False, fontsize=11 * FS)   # empty corner, clear of the river
     save(fig, "poster_3_map")
 
 
@@ -312,7 +306,7 @@ def geo_axes(ax):
 def scalebar(ax, lon, lat, km, lat_ref=38.0):
     deg = km / (111.32 * np.cos(np.radians(lat_ref)))
     ax.plot([lon, lon + deg], [lat, lat], color=INK2, lw=2, solid_capstyle="butt")
-    ax.text(lon + deg / 2, lat, f"{km} km", ha="center", va="bottom", fontsize=10.5, color=INK2,
+    ax.text(lon + deg / 2, lat, f"{km} km", ha="center", va="bottom", fontsize=10.5 * FS, color=INK2,
             transform=ax.transData, bbox=dict(fc="none", ec="none", pad=4))
 
 
@@ -327,12 +321,8 @@ def fig_graph():
         xy = cells(d["original_path"])
         a1.plot(xy[:, 0], xy[:, 1], color=GRAPH, lw=1.6, alpha=0.55, zorder=2)
     draw_nodes(a1, G, kind, scale=0.8)
-    x0, x1, y0, y1 = ZOOM
-    a1.add_patch(mpl.patches.Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, ec=INK, lw=1.2, zorder=7))
-    a1.annotate("zoomed in on\nthe next figure", (x1, y1), xytext=(8, 4), textcoords="offset points",
-                fontsize=10.5, color=INK2, ha="left", va="bottom")
     scalebar(a1, -115.2, 32.0, 200)
-    a1.set_title("The river: 67,401 grid cells (90 m)", loc="left", fontweight="bold", color=INK, pad=8)
+    a1.set_title("River: 67,401 cells", loc="center", fontweight="bold", color=INK, pad=8)
     # right: the graph; each edge is a whole river reach, drawn straight, pointing downstream
     for u, v, d in G.edges(data=True):
         a2.annotate("", xy=(G.nodes[v]["longitude"], G.nodes[v]["latitude"]),
@@ -340,15 +330,10 @@ def fig_graph():
                     arrowprops=dict(arrowstyle="-|>,head_length=0.5,head_width=0.22", color=MUTED, lw=1.3,
                                     shrinkA=5, shrinkB=6), zorder=3)
     draw_nodes(a2, G, kind, scale=0.8)
-    a2.set_title("The graph: 67 nodes, 66 edges", loc="left", fontweight="bold", color=INK, pad=8)
-    a2.text(-115.3, 41.9, "Arrows point downstream.\nEach edge stands for one river reach\n"
-            "and is weighted by its length.", fontsize=10.5, color=INK2, va="top", linespacing=1.35)
-    node_legend(fig, loc="lower left", bbox_to_anchor=(0.0, 0.905), ncol=4, fontsize=11,
+    a2.set_title("Graph: 67 nodes", loc="center", fontweight="bold", color=INK, pad=8)
+    node_legend(fig, loc="lower center", bbox_to_anchor=(0.5, 0.9), ncol=2, fontsize=11 * FS,
                 handletextpad=0.2, columnspacing=1.4)
-    fig.subplots_adjust(wspace=0.04, top=0.88)
-    title(fig, "From river to graph: the Colorado basin as a network",
-          "Only stations, confluences and river ends are kept as nodes; "
-          "everything between them collapses into a single weighted edge")
+    fig.subplots_adjust(wspace=0.04, top=0.86)
     save(fig, "poster_4_graph")
 
 
@@ -373,15 +358,15 @@ def fig_zoom():
         ax.scatter(xy[:, 0], xy[:, 1], s=1.6, color=GRAPH, alpha=0.6, lw=0, zorder=2)
         m = xy[len(xy) // 2]
         if inside(m[None])[0] and d["length_m"] > 30000:
-            ax.text(m[0], m[1], f"{d['length_m'] / 1000:.0f} km", fontsize=11, color=INK, ha="center",
+            ax.text(m[0], m[1], f"{d['length_m'] / 1000:.0f} km", fontsize=11 * FS, color=INK, ha="center",
                     va="center", zorder=8, bbox=dict(boxstyle="round,pad=0.25", fc=SURFACE, ec=GRID, lw=0.8))
     draw_nodes(ax, G, kind, scale=1.6, lw=2)
     for text, xy in [("Colorado River", (-107.62, 39.62)), ("Gunnison River", (-108.05, 38.62)),
                      ("Dolores River", (-109.02, 38.62))]:
-        ax.text(*xy, text, fontsize=12, color=INK2, style="italic", ha="center", va="center", zorder=8)
+        ax.text(*xy, text, fontsize=12 * FS, color=INK2, style="italic", ha="center", va="center", zorder=8)
     gj = G.nodes[92101856]
     ax.annotate("Gunnison River joins\nat Grand Junction", (gj["longitude"], gj["latitude"]),
-                xytext=(-108.95, 38.9), textcoords="data", fontsize=11, color=INK, ha="center", va="top",
+                xytext=(-108.95, 38.9), textcoords="data", fontsize=11 * FS, color=INK, ha="center", va="top",
                 arrowprops=dict(arrowstyle="-", color=INK2, lw=0.8, shrinkB=7), zorder=8)
     scalebar(ax, x1 - 0.45, y0 + 0.05, 25, lat_ref=39.2)
 
@@ -398,7 +383,6 @@ def fig_zoom():
     for sp in ins.spines.values():
         sp.set_visible(True); sp.set_color(INK); sp.set_linewidth(1)
     ins.set_facecolor(SURFACE)
-    ins.set_title("Close-up: every square is one 90 m river cell", fontsize=11, color=INK, loc="left", pad=4)
     ax.indicate_inset(bounds=(ix0, iy0, ix1 - ix0, iy1 - iy0), inset_ax=ins, edgecolor=MUTED, lw=0.8)
 
     h = [plt.Line2D([], [], ls="", marker="s", ms=5, mfc=GRAPH, mec=GRAPH, alpha=0.75,
@@ -407,10 +391,7 @@ def fig_zoom():
          *[plt.Line2D([], [], ls="", marker=m, ms=np.sqrt(sz) * 0.85, mfc=fc, mec=ec if ec != SURFACE else fc,
                       mew=1.3, label=lab.split(" (")[0]) for m, sz, fc, ec, _, lab in NODE_STYLE.values()
            if lab.split(" (")[0] != "Source or outlet"]]
-    ax.legend(handles=h, loc="lower right", bbox_to_anchor=(1.0, 0.12), frameon=False, fontsize=11.5)
-    title(fig, "Nodes sit on the river; edges follow it",
-          "Colorado River from Glenwood Springs to Cisco, Utah. Each graph edge (dashed) stands for the "
-          "chain of river cells between two nodes, labelled with its length.")
+    ax.legend(handles=h, loc="lower right", bbox_to_anchor=(1.0, 0.12), frameon=False, fontsize=11.5 * FS)
     save(fig, "poster_5_zoom")
 
 
@@ -450,10 +431,10 @@ def fig_uncompressed():
     a1.add_patch(mpl.patches.Rectangle((x0 - 0.13, y0 - 0.11), (x1 - x0) + 0.26, (y1 - y0) + 0.22,
                                        fill=False, ec=INK, lw=1.2, zorder=7))
     a1.annotate("right panel", (x1 + 0.13, y1 + 0.11), xytext=(6, 2), textcoords="offset points",
-                fontsize=10.5, color=INK2, ha="left", va="bottom")
+                fontsize=10.5 * FS, color=INK2, ha="left", va="bottom")
     scalebar(a1, -115.2, 32.0, 200)
-    a1.set_title(f"Whole basin: {U.number_of_nodes():,} nodes, {U.number_of_edges():,} edges",
-                 loc="left", fontweight="bold", color=INK, pad=8)
+    a1.set_title(f"Whole basin: {U.number_of_nodes():,} nodes", loc="center", fontweight="bold",
+                 color=INK, pad=8)
 
     # right: close-up, every node and every edge, pointing downstream
     geo_axes(a2)
@@ -473,12 +454,11 @@ def fig_uncompressed():
     for sp in a2.spines.values():
         sp.set_visible(True); sp.set_color(INK); sp.set_linewidth(1)
     scalebar(a2, x0 + 0.002, y0 + 0.0012, 0.5, lat_ref=39.05)
-    a2.set_title("Close-up at Grand Junction: one node per 90 m cell", loc="left", fontweight="bold",
-                 color=INK, pad=8)
+    a2.set_title("Close-up: one node per 90 m cell", loc="center", fontweight="bold", color=INK, pad=8)
     for text, xy in [("Colorado River\n(downstream)", (-108.5715, 39.0640)),
                      ("Colorado River\n(upstream)", (-108.5590, 39.0605)),
                      ("Gunnison River", (-108.5605, 39.0470))]:
-        a2.text(*xy, text, fontsize=11, color=INK2, style="italic", ha="center", va="center", zorder=9,
+        a2.text(*xy, text, fontsize=11 * FS, color=INK2, style="italic", ha="center", va="center", zorder=9,
                 bbox=dict(boxstyle="round,pad=0.2", fc=SURFACE, ec="none", alpha=0.85))
 
     h = [plt.Line2D([], [], ls="", marker=m, ms=7 if k != "pass" else 5,
@@ -486,13 +466,9 @@ def fig_uncompressed():
                     alpha=0.6 if k == "pass" else 1, mew=1.3, label=lab)
          for k, (m, fc, ec, _, lab) in style.items()]
     h.append(plt.Line2D([], [], color=MUTED, lw=1, marker=">", ms=5, label="Edge, pointing downstream"))
-    fig.legend(handles=h, loc="lower left", bbox_to_anchor=(0.0, 0.905), ncol=5, frameon=False,
-               fontsize=10.5, handletextpad=0.3, columnspacing=1.2)
-    fig.subplots_adjust(wspace=0.06, top=0.88)
-    title(fig, "The uncompressed river graph",
-          "Every MERIT Hydro cell is a node, linked to the next cell downstream. All but "
-          f"{U.number_of_nodes() - counts['pass']} nodes simply pass the flow on; compression removes them, "
-          "leaving the 67-node graph.")
+    fig.legend(handles=h, loc="lower center", bbox_to_anchor=(0.5, 0.9), ncol=3, frameon=False,
+               fontsize=10.5 * FS, handletextpad=0.3, columnspacing=1.2)
+    fig.subplots_adjust(wspace=0.06, top=0.86)
     save(fig, "poster_6_uncompressed")
 
 

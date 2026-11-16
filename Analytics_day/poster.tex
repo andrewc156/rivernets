@@ -15,6 +15,7 @@
 \usepackage{lmodern}
 \usepackage[size=custom,width=120,height=90,scale=1.0]{beamerposter}
 \usetheme{gemini}
+\setbeamerfont{headline title}{size=\huge,series=\bfseries} % smaller than the theme default (\Huge) so the three-line title leaves room for the columns
 \usecolortheme{ksu}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -39,7 +40,7 @@
 % Title
 % ====================
 
-\title{RiverNets: Predicting Water Quality at Unmonitored Sites\\with a Graph of the Colorado River Network}
+\title{RiverNets: Graph-Laplacian Regression on River Networks\\for Water-Quality Prediction at Unmonitored Stations\\in the Colorado River Basin}
 
 % \author{First Author \inst{1} \and Second Author \inst{2} \and Third Author \inst{2}}
 \author{Andrew Chincea \and Yunus Kaya}
@@ -54,7 +55,9 @@
 \footercontent{
   \href{https://github.com/andrewc156/rivernets}{github.com/andrewc156/rivernets} \hfill
   KSU Analytics Day Fall 2026 --- Kennesaw State University \hfill
-  \href{mailto:corresponding-author@students.kennesaw.edu}{corresponding-author@students.kennesaw.edu}}
+  \href{mailto:achincea@students.kennesaw.edu}{achincea@students.kennesaw.edu},
+  \href{mailto:ykaya1@students.kennesaw.edu}{ykaya1@students.kennesaw.edu},
+  \href{mailto:maktas@kennesaw.edu}{maktas@kennesaw.edu}}
 
 % ====================
 % Logo
@@ -85,60 +88,28 @@
 \begin{column}{\colwidth}
 
   \begin{block}{Introduction}
-    Water-quality sensors cover only a few points of a river system. We ask whether the
-    \textbf{structure of the river network} helps predict water quality at a station the model
-    has never seen, using hourly USGS records (one year per station, mostly Oct 2025 -- Oct 2026)
-    at 26 stations in the Colorado River basin: \textbf{water temperature, dissolved oxygen (DO),
-    specific conductance (salinity) and pH}.
-
-    Graph neural networks on river networks have been used for flood and streamflow forecasting
-    \cite{kazadi2024,taghizadeh2025,sit2021}, including in the Upper Colorado \cite{akkala2025},
-    and for water-quality prediction \cite{wan2025}. We instead use a linear model with a
-    graph-smoothness penalty, which is interpretable and predicts at stations with no data.
+    \begin{itemize}
+      \item Water-quality sensors cover only a few points of a river system.
+      \item \textbf{Question:} does the \textbf{structure of the river network} help predict water
+            quality at a station the model has never seen?
+      \item \textbf{Data:} hourly USGS records at 26 stations in the Colorado River basin (one year
+            per station, mostly Oct 2025 -- Oct 2026): \textbf{water temperature, dissolved oxygen
+            (DO), specific conductance (salinity) and pH}.
+      \item \textbf{Prior work:} graph neural networks on river networks forecast floods and
+            streamflow \cite{kazadi2024,taghizadeh2025,sit2021}, including in the Upper Colorado
+            \cite{akkala2025}, and water quality \cite{wan2025} at monitored stations.
+      \item \textbf{Our approach:} an interpretable linear model with a graph-smoothness penalty
+            that predicts at stations with no data.
+    \end{itemize}
   \end{block}
 
   \begin{block}{From river to graph}
     MERIT Hydro flow directions at 90\,m \cite{yamazaki2019} give a graph with one node per river
-    cell. Keeping only stations, gauges, confluences and river ends compresses it to 67 nodes.
+    cell (67,401 nodes, left). Keeping only stations, gauges, confluences and river ends compresses
+    it to \textbf{67 nodes} (right); each edge stands for one river reach, weighted by its length.
     \begin{figure}
       \centering
-      \includegraphics[width=0.788\linewidth]{figures/poster_6_uncompressed.pdf}
-    \end{figure}
-    \begin{figure}
-      \centering
-      \includegraphics[width=0.788\linewidth]{figures/poster_4_graph.pdf}
-    \end{figure}
-    \begin{figure}
-      \centering
-      \includegraphics[width=0.788\linewidth]{figures/poster_5_zoom.pdf}
-    \end{figure}
-  \end{block}
-
-\end{column}
-
-\separatorcolumn
-
-% ===================================================================== column 2
-\begin{column}{\colwidth}
-
-  \begin{block}{Graph-Laplacian model}
-    For station $i$ and hour $t$, $\hat y_{it} = \beta_0 + z_{it}^\top\beta + g_i$: seasonal and
-    daily cycles, other sensor readings and static river attributes $z_{it}$, plus a station
-    offset $g_i$ that is smooth along the river:
-    \[
-      \min_{\beta,\,g}\; \sum_{i}\frac{1}{n_i}\sum_t \bigl(y_{it}-\beta_0-z_{it}^\top\beta-g_i\bigr)^2
-      + \lambda_\beta\lVert\beta\rVert^2 + \lambda \sum_{(i,j)} w_{ij}(g_i-g_j)^2 .
-    \]
-    \textbf{Kron reduction} \cite{dorfler2013,kron1939,schur1917} removes the non-station nodes exactly, leaving a
-    $26\times26$ Laplacian. A held-out station's offset is \textbf{interpolated from its
-    neighbours along the river}. Evaluation: leave one station out, with all tuning in an inner
-    leave-one-out, against six standard models.
-  \end{block}
-
-  \begin{block}{Results: model comparison}
-    \begin{figure}
-      \centering
-      \includegraphics[width=\linewidth]{figures/poster_1_models.pdf}
+      \includegraphics[width=\linewidth]{figures/poster_4_graph.pdf}
     \end{figure}
   \end{block}
 
@@ -169,10 +140,58 @@
     \textbf{seasonality}, and DO follows water temperature and the daily cycle.
   \end{block}
 
-  \begin{block}{How local is the network signal?}
+\end{column}
+
+\separatorcolumn
+
+% ===================================================================== column 2
+\begin{column}{\colwidth}
+
+  \begin{block}{Graph-Laplacian model}
+    \begin{itemize}
+      \item For station $i$ and hour $t$: $\hat y_{it} = \beta_0 + z_{it}^\top\beta + g_i$.
+      \item $z_{it}$: seasonal and daily cycles, other sensors, river attributes (elevation, area, slope).
+      \item $g_i$: a \textbf{station offset that is smooth along the river}, from a graph-Laplacian
+            penalty on connected stations $(i,j)$ with edge weights $w_{ij}$:
+    \end{itemize}
+    \[
+      \min_{\beta,\,g}\; \sum_{i}\frac{1}{n_i}\sum_t \bigl(y_{it}-\beta_0-z_{it}^\top\beta-g_i\bigr)^2
+      + \lambda_\beta\lVert\beta\rVert^2 + \lambda \sum_{(i,j)} w_{ij}(g_i-g_j)^2 .
+    \]
+    \begin{itemize}
+      \item \textbf{Kron reduction} \cite{dorfler2013,kron1939} removes the non-station nodes
+            exactly, leaving a $26\times26$ Laplacian.
+      \item A held-out station's offset is \textbf{interpolated from its neighbours along the river}.
+    \end{itemize}
+
+    \vspace{0.4em}{\usebeamerfont{block title}Evaluation}
+    \begin{itemize}
+      \item \textbf{Leave one station out:} train on all other stations, then predict the held-out
+            station's whole record. The model never sees any data from that station.
+      \item \textbf{No tuning on the test station:} features, $\lambda$ and edge weights are chosen
+            by an inner leave-one-station-out on the training stations only.
+      \item \textbf{Score:} $R^2$ at the held-out station, each station weighted equally; $0$ is
+            predicting the training mean.
+      \item \textbf{Compared with six models} on the same features and tuning: \textbf{OLS, Ridge,
+            Elastic Net, spline GAM, random forest, gradient boosting}.
+      \item \textbf{Harder tests:} hold out 3 stations, or a whole subbasin, at once.
+    \end{itemize}
+  \end{block}
+
+  \begin{block}{Results: model comparison}
+    Graph model (blue) vs the six comparison models (grey shapes); right: lead over the best one.
     \begin{figure}
       \centering
-      \includegraphics[width=\linewidth]{figures/poster_2_splits.pdf}
+      \includegraphics[width=0.88\linewidth]{figures/poster_1_models.pdf}
+    \end{figure}
+  \end{block}
+
+  \begin{block}{How local is the network signal?}
+    $R^2$ as more of the network is held out. For specific conductance the graph model's lead
+    holds with 3 stations out but vanishes when its whole subbasin is held out.
+    \begin{figure}
+      \centering
+      \includegraphics[width=0.88\linewidth]{figures/poster_2_splits.pdf}
     \end{figure}
   \end{block}
 
@@ -184,13 +203,16 @@
 \begin{column}{\colwidth}
 
   \begin{block}{Where the network helps}
+    Specific conductance: \textbf{blue} stations have lower error with the graph model than with
+    Ridge, \textbf{red} higher. Labels: the graph model's $R^2$ within each subbasin.
     \begin{figure}
       \centering
-      \includegraphics[width=0.92\linewidth]{figures/poster_3_map.pdf}
+      \includegraphics[width=\linewidth]{figures/poster_3_map.pdf}
     \end{figure}
   \end{block}
 
   \begin{alertblock}{Conclusions}
+    \setbeamercolor{item}{fg=ksublack}% gold theme bullets are invisible on the gold block
     \begin{itemize}
       \item A river-network smoothness term predicts \textbf{specific conductance}
             ($R^2$ 0.38 vs 0.02 for the best other model) and \textbf{pH} (0.12 vs 0.02) at
