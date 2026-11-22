@@ -1,0 +1,158 @@
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/phdiel_parts/base/ph
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Diel water temperature (baseline): pH rows restricted to node-hours with wt_diel
+  pH stations 19 -> 18 | rows 121,011 -> 120,839
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 9 | predictors in union: 19
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['pH']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: pH
+================================================================================
+
+Target: pH
+Nodes: 18
+Rows: 120,839
+Feature candidates: 9
+Outer fold 1/18 | test 67739434Outer fold 2/18 | test 81497938Outer fold 3/18 | test 82982643Outer fold 4/18 | test 83027786Outer fold 5/18 | test 83222751Outer fold 6/18 | test 84197086Outer fold 7/18 | test 88786999Outer fold 8/18 | test 90706215Outer fold 9/18 | test 93300040Outer fold 10/18 | test 93392084Outer fold 11/18 | test 96496279Outer fold 12/18 | test 97532807Outer fold 13/18 | test 126377584Outer fold 14/18 | test 131520862Outer fold 15/18 | test 133114453Outer fold 16/18 | test 134075067Outer fold 17/18 | test 186559442Outer fold 18/18 | test 203177183
+
+Saved: pH
+Target           Model  Nodes   Rows        R2     RMSE
+    pH Graph-Laplacian     18 120839  0.061860 0.226567
+    pH           Ridge     18 120839  0.020335 0.231527
+    pH     Elastic Net     18 120839  0.016453 0.231985
+    pH             OLS     18 120839  0.008760 0.232890
+    pH      Spline GAM     18 120839  0.006188 0.233192
+    pH           Dummy     18 120839 -0.033336 0.237784
+Target           Model  Nodes   Rows        R2     RMSE
+    pH Graph-Laplacian     18 120839  0.061860 0.226567
+    pH           Ridge     18 120839  0.020335 0.231527
+    pH     Elastic Net     18 120839  0.016453 0.231985
+    pH             OLS     18 120839  0.008760 0.232890
+    pH      Spline GAM     18 120839  0.006188 0.233192
+    pH           Dummy     18 120839 -0.033336 0.237784
+Saved master metrics.
+Prediction rows: 725,034
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+target           model          features  outer_folds
+    pH           Dummy        configured           18
+    pH     Elastic Net        configured           18
+    pH Graph-Laplacian        K=2 | none           15
+    pH Graph-Laplacian     K=2 | reduced            2
+    pH Graph-Laplacian K=2 | local_slope            1
+    pH             OLS        K=2 | none           17
+    pH             OLS K=2 | local_slope            1
+    pH           Ridge        K=2 | none           17
+    pH           Ridge K=2 | local_slope            1
+    pH      Spline GAM        K=2 | none           16
+    pH      Spline GAM     K=2 | reduced            2
+Saved configs.
+
+R2 TABLE
+
+Model      Dummy  Elastic Net  Graph-Laplacian      OLS     Ridge  Spline GAM
+Target                                                                       
+pH     -0.033336     0.016453          0.06186  0.00876  0.020335    0.006188
+
+RMSE TABLE
+
+Model      Dummy  Elastic Net  Graph-Laplacian      OLS     Ridge  Spline GAM
+Target                                                                       
+pH      0.237784     0.231985         0.226567  0.23289  0.231527    0.233192
+
+BEST CONVENTIONAL MODELS
+
+Target Model  Nodes   Rows       R2     RMSE
+    pH Ridge     18 120839 0.020335 0.231527
+
+================================================================================
+pH
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+{'alpha': 10.0}           17
+ {'alpha': 3.0}            1
+
+ Elastic Net
+                      Parameters  Outer folds
+{'alpha': 0.01, 'l1_ratio': 0.5}           18
+
+ Spline GAM
+                   Parameters  Outer folds
+{'n_knots': 6, 'alpha': 10.0}           16
+ {'n_knots': 6, 'alpha': 1.0}            2
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+Target           Model  Nodes   Rows        R2     RMSE
+    pH Graph-Laplacian     18 120839  0.061860 0.226567
+    pH           Ridge     18 120839  0.020335 0.231527
+    pH     Elastic Net     18 120839  0.016453 0.231985
+    pH             OLS     18 120839  0.008760 0.232890
+    pH      Spline GAM     18 120839  0.006188 0.233192
+    pH           Dummy     18 120839 -0.033336 0.237784
+Finished.
