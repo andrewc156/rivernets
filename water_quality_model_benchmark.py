@@ -128,6 +128,75 @@ DAYMET = os.environ.get("BENCHMARK_DAYMET", "")
 DAYMET_COLS = ["dm_1d", "dm_3d", "dm_7d", "dm_30d", "dm_api"]
 if DAYMET not in ("", "baseline", "on"):
     raise ValueError("BENCHMARK_DAYMET must be '', 'baseline' or 'on'")
+
+# DO saturation (opt-in, DO target only): BENCHMARK_DOSAT=baseline keeps only the
+# DO rows with both features of build_dosat_features.py and adds nothing;
+# BENCHMARK_DOSAT=on also offers every DO candidate with + do_sat (Benson & Krause
+# fresh-water saturation at the measured water temperature and the station's
+# barometric pressure) and with + do_sat, wt_diel (water temperature minus its
+# centred 24-hour mean). Both use only the station's own water-temperature sensor
+# and its elevation, and both arms keep the same rows, so they are paired.
+DOSAT = os.environ.get("BENCHMARK_DOSAT", "")
+DOSAT_COLS = ["do_sat", "wt_diel"]
+if DOSAT not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_DOSAT must be '', 'baseline' or 'on'")
+
+# Dam tailwater (opt-in): BENCHMARK_TAILWATER=on also offers every candidate with
+# tw_tail = exp(-d / 100 km), d the river distance below the nearest major dam
+# upstream (build_tailwater_features.py: the MAJOR_DAMS below plus Bartlett, with
+# the dams that lie off the graph attached by tracing MERIT flow directions), and
+# tw_tail times the first two annual harmonics ("... + TW"), so the annual cycle
+# can be damped and shifted just below dams. Static per station, so all rows are
+# kept; BENCHMARK_TAILWATER=baseline (the columns, no new candidates) is the
+# paired baseline.
+TAILWATER = os.environ.get("BENCHMARK_TAILWATER", "")
+TAILWATER_HARMONICS = ["doy_sin_1", "doy_cos_1", "doy_sin_2", "doy_cos_2"]
+TAILWATER_COLS = ["tw_tail", *[f"tw_tail_{c}" for c in TAILWATER_HARMONICS]]
+if TAILWATER not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_TAILWATER must be '', 'baseline' or 'on'")
+
+# Turbidity runoff signal (opt-in): BENCHMARK_RUNOFF=baseline keeps only the
+# turbidity rows with runoff features (build_runoff_features.py) and adds
+# nothing; BENCHMARK_RUNOFF=on also offers every turbidity candidate with
+# [sc_anom, sc_d6] ("... + R") and [sc_anom, sc_d6, sc_mean_log] ("... + RM"):
+# the drop of the station's own conductance below its trailing 7-day median,
+# its 6-hour change and the station's mean log conductance. Storm runoff
+# dilutes conductance while turbidity rises. Turbidity only; both arms keep the
+# same rows, so they are paired. Not combined with BENCHMARK_RAIN (whose
+# candidates also end in " + R").
+RUNOFF = os.environ.get("BENCHMARK_RUNOFF", "")
+RUNOFF_COLS = ["sc_anom", "sc_d6", "sc_mean_log"]
+if RUNOFF not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_RUNOFF must be '', 'baseline' or 'on'")
+if RUNOFF and RAIN:
+    raise ValueError("BENCHMARK_RUNOFF and BENCHMARK_RAIN cannot be combined")
+
+# Diel water temperature for pH (opt-in): BENCHMARK_PHDIEL=baseline keeps only the
+# pH rows with wt_diel (build_phdiel_features.py: the station's hourly water
+# temperature minus its centred 24-hour mean) and adds nothing; =on also offers
+# every pH candidate with wt_diel ("... + WD"). pH only; other targets unchanged.
+PHDIEL = os.environ.get("BENCHMARK_PHDIEL", "")
+PHDIEL_COLS = ["wt_diel"]
+if PHDIEL not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_PHDIEL must be '', 'baseline' or 'on'")
+
+# Air temperature (opt-in): BENCHMARK_AIRTEMP=baseline keeps only the node-hours
+# with air-temperature features (all of them: ERA5-Land covers every benchmark
+# row; build_airtemp_features.py) and adds nothing; BENCHMARK_AIRTEMP=on also
+# offers at_1h, at_24h, at_72h, at_168h (2 m air temperature at the hour and its
+# trailing 24 h, 72 h and 7-day means, degrees C) with every candidate
+# ("... + A"). Air temperature is weather data available anywhere, so the
+# held-out station's water quality never enters. Both arms keep the same rows
+# and row indices, so they are paired with each other and with the default run.
+# The default results folder is not specific to this option, so a run with
+# BENCHMARK_AIRTEMP must name its own BENCHMARK_RESULTS_DIR.
+AIRTEMP = os.environ.get("BENCHMARK_AIRTEMP", "")
+AIRTEMP_COLS = ["at_1h", "at_24h", "at_72h", "at_168h"]
+if AIRTEMP not in ("", "baseline", "on"):
+    raise ValueError("BENCHMARK_AIRTEMP must be '', 'baseline' or 'on'")
+if AIRTEMP and not os.environ.get("BENCHMARK_RESULTS_DIR"):
+    raise ValueError("BENCHMARK_AIRTEMP needs BENCHMARK_RESULTS_DIR (see run_airtemp_parallel.sh)")
+
 if YEAR_EFFECT not in ("", "wy", "month"):
     raise ValueError("BENCHMARK_YEAR_EFFECT must be '', 'wy' or 'month'")
 NEIGHBOUR_K = 3
@@ -1094,6 +1163,106 @@ def fit_predict_graph_gb(outer_train, outer_test, target, candidates):
     return name, best_params, g["inner_mse"], pred
 
 
+# --- option: blend ---
+# Graph-GB blend (opt-in model, BENCHMARK_MODELS="Graph-Laplacian,Gradient Boosting,
+# Graph-GB blend"): a weighted average of the two models,
+#     y_hat = w * graph + (1 - w) * gradient boosting,   w in {0, 0.05, ..., 1}.
+# In every outer fold both models are tuned exactly as on their own (the graph model
+# by its joint inner-LOO search, gradient boosting by select_and_tune_inner_loo).
+# w is then chosen by a second inner leave-one-station-out on the outer training
+# stations only: each training station j is predicted by both models fitted without
+# j (and without the held-out station) with the settings tuned for this fold, and w
+# minimises the mean over j of j's MSE (equal station weights, as everywhere). The
+# held-out station never influences w. The gradient-boosting inner fits are refits:
+# they repeat exactly (deterministic, same rows) the tuning's fits for the chosen
+# setting, n_train extra fits per outer fold, about 8% of the tuning's cost. They use
+# the tuning's rows (BENCHMARK_INNER_STRIDE, default every row). The graph refits are
+# exact and cheap from the per-node moments. Listed after its two components, the
+# blend reuses their outer predictions instead of fitting them again.
+BLEND_NAME = "Graph-GB blend"
+BLEND_WEIGHTS = np.round(np.linspace(0.0, 1.0, 21), 2)
+_GB_LAST = {}
+
+
+def _blend_gb_component(outer_train, outer_test, target, candidates):
+    """Gradient boosting for this outer fold: the cached run of the plain model, or
+    the same tuning and fit as the benchmark loop does for it."""
+    fold = _fold_id(target, outer_test)
+    if _GB_LAST.get("id") != fold:
+        name, params, inner_mse = select_and_tune_inner_loo(
+            outer_train=outer_train, target=target, candidates=candidates,
+            model_name="Gradient Boosting", node_col="node"
+        )
+        features = candidates[name]
+        model = build_benchmark_model("Gradient Boosting", params)
+        model.fit(
+            outer_train[features].to_numpy(), outer_train[target].to_numpy(),
+            model__sample_weight=equal_node_weights(outer_train, node_col="node"),
+        )
+        _GB_LAST.clear()
+        _GB_LAST.update({
+            "id": fold, "feature_set": name, "best_params": params,
+            "inner_mse": inner_mse, "pred": model.predict(outer_test[features].to_numpy()),
+        })
+    return dict(_GB_LAST)
+
+
+def fit_predict_blend(outer_train, outer_test, target, candidates):
+    """Graph-GB blend for one outer fold (see the comment above)."""
+    fold = _fold_id(target, outer_test)
+    if _GRAPH_LAST.get("id") != fold:
+        fit_predict_graph_laplacian(outer_train, outer_test, target, candidates)
+    g = dict(_GRAPH_LAST)
+    if GRAPH_AVERAGE_TOP > 1:
+        raise ValueError(f"{BLEND_NAME} needs GRAPH_AVERAGE_TOP=1")
+    b = _blend_gb_component(outer_train, outer_test, target, candidates)
+
+    name, key, stats, g_features = g["name"], g["key"], g["stats"], g["features"]
+    vidx = _graph_vidx(name, g_features)
+    train_nodes = sorted(stats)
+    if g["transform"] == "log1p":
+        log_train = outer_train.assign(**{target: np.log1p(outer_train[target])})
+        by_node = {int(n): grp for n, grp in log_train.groupby("node")}
+    b_features = candidates[b["feature_set"]]
+    tune_df = thin_rows(outer_train, INNER_STRIDE, "node")
+
+    # per training station j: a = mean (y-B)^2, c = mean (y-B)(G-B), d = mean (G-B)^2,
+    # so that j's MSE at weight w is a - 2 w c + w^2 d
+    abc = []
+    for j, val in tune_df.groupby("node"):
+        j = int(j)
+        others = [n for n in train_nodes if n != j]
+        if g["transform"] == "log1p":
+            g_pred = _graph_log_predict(by_node, stats, g_features, key, others, val, j, target)
+        else:
+            model = _graph_fit(stats, others, *key, vidx=vidx)
+            g_pred = _graph_predict(model, val, g_features, j)
+        inner_train = tune_df[tune_df["node"] != j]
+        gb = build_benchmark_model("Gradient Boosting", b["best_params"])
+        gb.fit(
+            inner_train[b_features].to_numpy(), inner_train[target].to_numpy(),
+            model__sample_weight=equal_node_weights(inner_train, node_col="node"),
+        )
+        b_pred = gb.predict(val[b_features].to_numpy())
+        y = val[target].to_numpy(dtype=float)
+        abc.append((np.mean((y - b_pred) ** 2), np.mean((y - b_pred) * (g_pred - b_pred)),
+                    np.mean((g_pred - b_pred) ** 2)))
+    a, c, d = np.mean(abc, axis=0)
+    inner = a - 2 * BLEND_WEIGHTS * c + BLEND_WEIGHTS ** 2 * d
+    k = int(np.argmin(inner))
+    w = float(BLEND_WEIGHTS[k])
+
+    pred = w * g["pred"] + (1.0 - w) * b["pred"]
+    best_params = {
+        "w_graph": w,
+        "graph_features": name, "graph": g["best_params"],
+        "gb_features": b["feature_set"], "gb": b["best_params"],
+        "inner_mse_graph_only": float(inner[-1]), "inner_mse_gb_only": float(inner[0]),
+    }
+    return f"graph: {name} | gb: {b['feature_set']}", best_params, float(inner[k]), pred
+# --- end option: blend ---
+
+
 # Fourier Helpers
 def fourier_features(K):
     cols = []
@@ -1404,6 +1573,138 @@ if NEIGHBOUR:
             **{f"{name} + N": [*features, NEIGHBOUR_COL]
                for name, features in cfg["candidates"].items()}
         }
+
+
+# --- option: dosat (BENCHMARK_DOSAT) ---
+if DOSAT:
+    _ds = pd.read_pickle(BENCHMARK_DIR / "dosat_features.pkl")
+    _ds = _ds[_ds[DOSAT_COLS].notna().all(axis=1)]
+    _target = "DO concentration"
+    _cfg = TARGET_CONFIGS[_target]
+    _df = _cfg["df"].drop(columns=DOSAT_COLS, errors="ignore")
+    _merged = _df.merge(_ds, on=["node", "time"], how="left", validate="many_to_one")
+    _merged.index = _df.index  # keep the original row index (row_index in the predictions)
+    _cfg["df"] = _merged[_merged[DOSAT_COLS].notna().all(axis=1)].copy()
+    _used = _cfg["df"].dropna(subset=[_target, *TARGET_CHEMISTRY[_target]])
+    _before = _df.dropna(subset=[_target, *TARGET_CHEMISTRY[_target]])
+    _per_node = _used.groupby("node").size()
+    print(
+        f"\nDO saturation ({DOSAT}): {_target} rows restricted to node-hours with do_sat and wt_diel\n"
+        f"  stations {len(_per_node):>2} | rows {len(_used):>7,} (of {len(_before):,}) | "
+        f"rows per station min {_per_node.min():,}, median {int(_per_node.median()):,}"
+    )
+    if DOSAT == "on":
+        _cfg["candidates"] = {
+            **_cfg["candidates"],
+            **{f"{name} + S": [*features, "do_sat"]
+               for name, features in _cfg["candidates"].items()},
+            **{f"{name} + S + WD": [*features, "do_sat", "wt_diel"]
+               for name, features in _cfg["candidates"].items()},
+        }
+# --- end option: dosat ---
+
+# --- option: tailwater (BENCHMARK_TAILWATER) ---
+if TAILWATER:
+    _tw = pd.read_csv(BENCHMARK_DIR / "tailwater_features.csv").set_index("node")
+    print(f"\nTailwater ({TAILWATER}): tw_tail > 0.1 at "
+          f"{', '.join(_tw.loc[_tw['tw_tail'] > 0.1, 'stations'])}")
+    for target, cfg in TARGET_CONFIGS.items():
+        df = cfg["df"].drop(columns=TAILWATER_COLS, errors="ignore")
+        _tail = df["node"].map(_tw["tw_tail"])
+        if _tail.isna().any():
+            raise ValueError(f"{target}: WQ nodes without a tailwater distance")
+        cfg["df"] = df.assign(
+            tw_tail=_tail,
+            **{f"tw_tail_{c}": _tail * df[c] for c in TAILWATER_HARMONICS}
+        )
+        if TAILWATER == "on":
+            cfg["candidates"] = {
+                **cfg["candidates"],
+                **{f"{name} + TW": [*features, *TAILWATER_COLS]
+                   for name, features in cfg["candidates"].items()}
+            }
+# --- end option: tailwater ---
+
+# --- option: runoff (BENCHMARK_RUNOFF) ---
+if RUNOFF:
+    _ro = pd.read_pickle(BENCHMARK_DIR / "runoff_features.pkl")
+    _cfg = TARGET_CONFIGS["Turbidity"]
+    _df = _cfg["df"].drop(columns=RUNOFF_COLS, errors="ignore")
+    _merged = _df.merge(_ro, on=["node", "time"], how="left", validate="many_to_one")
+    _merged.index = _df.index  # keep the original row index (row_index in the predictions)
+    _cfg["df"] = _merged[_merged[RUNOFF_COLS].notna().all(axis=1)]
+    _before = _df.dropna(subset=["Turbidity"])
+    _used = _cfg["df"].dropna(subset=["Turbidity"])
+    _per_node = _used.groupby("node").size()
+    print(
+        f"\nRunoff ({RUNOFF}): turbidity rows restricted to node-hours with runoff features: "
+        f"stations {_before['node'].nunique()} -> {len(_per_node)} | rows {len(_before):,} -> {len(_used):,} | "
+        f"rows per station min {_per_node.min():,}, median {int(_per_node.median()):,}"
+    )
+    if RUNOFF == "on":
+        _cfg["candidates"] = {
+            **_cfg["candidates"],
+            **{f"{name} + R": [*features, "sc_anom", "sc_d6"]
+               for name, features in _cfg["candidates"].items()},
+            **{f"{name} + RM": [*features, *RUNOFF_COLS]
+               for name, features in _cfg["candidates"].items()}
+        }
+# --- end option: runoff ---
+
+# --- option: phdiel (BENCHMARK_PHDIEL) ---
+# pH with the diel part of water temperature. wt_diel uses only the station's own
+# water-temperature sensor (no target values); its centred 24-hour window reaches
+# up to 12 hours after the row, fine for filling in records but not for real-time
+# use. Both arms keep exactly the pH rows that have wt_diel (pH rows without water
+# temperature drop out), so baseline and on are paired.
+if PHDIEL:
+    if HISTORY_DIR:
+        raise ValueError("BENCHMARK_PHDIEL uses data/benchmark_data only; not with BENCHMARK_HISTORY")
+    _wd = pd.read_pickle(BENCHMARK_DIR / "phdiel_features.pkl")
+    _wd_cfg = TARGET_CONFIGS["pH"]
+    _wd_df = _wd_cfg["df"].drop(columns=PHDIEL_COLS, errors="ignore")
+    _wd_merged = _wd_df.merge(_wd, on=["node", "time"], how="left", validate="many_to_one")
+    _wd_merged.index = _wd_df.index
+    _wd_cfg["df"] = _wd_merged[_wd_merged[PHDIEL_COLS].notna().all(axis=1)].copy()
+    _wd_all = _wd_df.dropna(subset=["pH", *TARGET_CHEMISTRY["pH"]])
+    _wd_used = _wd_cfg["df"].dropna(subset=["pH", *TARGET_CHEMISTRY["pH"]])
+    print(
+        f"\nDiel water temperature ({PHDIEL}): pH rows restricted to node-hours with wt_diel\n"
+        f"  pH stations {_wd_all['node'].nunique()} -> {_wd_used['node'].nunique()} | "
+        f"rows {len(_wd_all):,} -> {len(_wd_used):,}"
+    )
+    if PHDIEL == "on":
+        _wd_cfg["candidates"] = {
+            **_wd_cfg["candidates"],
+            **{f"{name} + WD": [*features, *PHDIEL_COLS]
+               for name, features in _wd_cfg["candidates"].items()}
+        }
+# --- end option: phdiel ---
+
+# --- option: airtemp (BENCHMARK_AIRTEMP) ---
+if AIRTEMP:
+    _at = pd.read_pickle(BENCHMARK_DIR / "airtemp_features.pkl")
+    print(f"\nAir temperature ({AIRTEMP}): rows restricted to node-hours with air-temperature features")
+    for target, cfg in TARGET_CONFIGS.items():
+        df = cfg["df"].drop(columns=AIRTEMP_COLS, errors="ignore")
+        merged = df.merge(_at[["node", "time", *AIRTEMP_COLS]], on=["node", "time"],
+                          how="left", validate="many_to_one")
+        merged.index = df.index  # keep the row indices of the default run
+        merged = merged[merged[AIRTEMP_COLS].notna().all(axis=1)].copy()
+        cfg["df"] = merged
+        used = merged.dropna(subset=[target, *TARGET_CHEMISTRY[target]])
+        per_node = used.groupby("node").size()
+        print(
+            f"  {target:<22} stations {len(per_node):>2} | rows {len(used):>7,} | "
+            f"rows per station min {per_node.min():,}, median {int(per_node.median()):,}"
+        )
+        if AIRTEMP == "on":
+            cfg["candidates"] = {
+                **cfg["candidates"],
+                **{f"{name} + A": [*features, *AIRTEMP_COLS]
+                   for name, features in cfg["candidates"].items()}
+            }
+# --- end option: airtemp ---
 
 
 if DAYMET:
@@ -2165,7 +2466,14 @@ def benchmark_target_nested_loo(
 
         for model_name in model_names:
 
-            if model_name in (GRAPH_MODEL_NAME, GRAPH_GB_NAME):
+            # --- option: blend ---
+            if model_name == BLEND_NAME:
+                feature_set, best_params, inner_mse, pred = fit_predict_blend(
+                    outer_train, outer_test, target, candidates
+                )
+            # --- end option: blend ---
+
+            elif model_name in (GRAPH_MODEL_NAME, GRAPH_GB_NAME):
 
                 (
                     feature_set,
@@ -2256,6 +2564,15 @@ def benchmark_target_nested_loo(
                         X_test
                     )
                 )
+
+                # --- option: blend ---
+                if model_name == "Gradient Boosting":  # reused by the Graph-GB blend
+                    _GB_LAST.clear()
+                    _GB_LAST.update({
+                        "id": _fold_id(target, outer_test), "feature_set": feature_set,
+                        "best_params": best_params, "inner_mse": inner_mse, "pred": pred,
+                    })
+                # --- end option: blend ---
 
             for (
                 row_index,
@@ -2398,6 +2715,12 @@ if RUN_TARGETS:
     TARGET_CONFIGS = {t: TARGET_CONFIGS[t] for t in RUN_TARGETS}
 
 MODEL_NAMES = RUN_MODELS or [*MODEL_CANDIDATES, GRAPH_MODEL_NAME]
+
+# --- option: blend ---
+# the blend runs after its two components in every fold, so it reuses their fits
+if BLEND_NAME in MODEL_NAMES:
+    MODEL_NAMES = [m for m in MODEL_NAMES if m != BLEND_NAME] + [BLEND_NAME]
+# --- end option: blend ---
 
 print("Targets:", list(TARGET_CONFIGS))
 print("Models:", MODEL_NAMES)
@@ -2659,6 +2982,13 @@ benchmark_config = {
         "year_effect": YEAR_EFFECT or "off",
         "rain": RAIN or "off",
         "daymet": DAYMET or "off",
+        "blend": {"model": BLEND_NAME, "weights": BLEND_WEIGHTS.tolist(),
+                  "selected_by": "inner LOO on the outer training stations, tuned settings refit"},
+        "dosat": DOSAT or "off",
+        "tailwater": TAILWATER or "off",
+        "runoff": RUNOFF or "off",
+        "phdiel": PHDIEL or "off",
+        "airtemp": AIRTEMP or "off",
         "time_split": TIME_SPLIT or "off",
         "split": SPLIT,
         "split_repeats": SPLIT_REPEATS,
@@ -2752,7 +3082,7 @@ rmse_table.to_csv(
 # Best Conventional Models
 best_conventional = (
     benchmark_results[
-        ~benchmark_results["Model"].isin([GRAPH_MODEL_NAME, GRAPH_GB_NAME])
+        ~benchmark_results["Model"].isin([GRAPH_MODEL_NAME, GRAPH_GB_NAME, BLEND_NAME])
     ]
     .sort_values(
         "R2",

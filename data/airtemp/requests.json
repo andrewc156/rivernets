@@ -1,0 +1,444 @@
+{
+ "47787846": {
+  "requested": {
+   "latitude": 41.51667,
+   "longitude": -109.44917,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 41.5,
+  "grid_longitude": -109.4,
+  "elevation_m": 1851.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "58738608": {
+  "requested": {
+   "latitude": 40.90833,
+   "longitude": -109.4225,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 40.90001,
+  "grid_longitude": -109.4,
+  "elevation_m": 1713.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "67739434": {
+  "requested": {
+   "latitude": 40.40833,
+   "longitude": -109.23417,
+   "start_date": "2024-12-23",
+   "end_date": "2025-12-31",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 40.40001,
+  "grid_longitude": -109.2,
+  "elevation_m": 1451.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "75465016": {
+  "requested": {
+   "latitude": 39.97917,
+   "longitude": -109.17833,
+   "start_date": "2026-03-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 40.0,
+  "grid_longitude": -109.2,
+  "elevation_m": 1517.0,
+  "hours": 4632,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "81497938": {
+  "requested": {
+   "latitude": 39.64417,
+   "longitude": -107.07833,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.600006,
+  "grid_longitude": -107.1,
+  "elevation_m": 1874.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "82982643": {
+  "requested": {
+   "latitude": 39.56167,
+   "longitude": -107.40667,
+   "start_date": "2024-04-29",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.600006,
+  "grid_longitude": -107.4,
+  "elevation_m": 1747.0,
+  "hours": 21288,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "83027786": {
+  "requested": {
+   "latitude": 39.55917,
+   "longitude": -107.29,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.5,
+  "grid_longitude": -107.299995,
+  "elevation_m": 1767.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "83222751": {
+  "requested": {
+   "latitude": 39.54833,
+   "longitude": -107.33,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.5,
+  "grid_longitude": -107.299995,
+  "elevation_m": 1746.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "84197086": {
+  "requested": {
+   "latitude": 39.49417,
+   "longitude": -107.93833,
+   "start_date": "2023-10-25",
+   "end_date": "2024-11-01",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.5,
+  "grid_longitude": -107.9,
+  "elevation_m": 1572.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "88786999": {
+  "requested": {
+   "latitude": 39.23917,
+   "longitude": -108.26583,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.199997,
+  "grid_longitude": -108.299995,
+  "elevation_m": 1470.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "90706215": {
+  "requested": {
+   "latitude": 39.1325,
+   "longitude": -109.02583,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.100006,
+  "grid_longitude": -109.0,
+  "elevation_m": 1322.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "92116891": {
+  "requested": {
+   "latitude": 39.05417,
+   "longitude": -108.54083,
+   "start_date": "2026-07-07",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.100006,
+  "grid_longitude": -108.5,
+  "elevation_m": 1397.0,
+  "hours": 2112,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "93300040": {
+  "requested": {
+   "latitude": 38.98833,
+   "longitude": -110.14917,
+   "start_date": "2024-11-16",
+   "end_date": "2025-11-24",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.0,
+  "grid_longitude": -110.1,
+  "elevation_m": 1234.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "93392084": {
+  "requested": {
+   "latitude": 38.98333,
+   "longitude": -108.45083,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 39.0,
+  "grid_longitude": -108.5,
+  "elevation_m": 1412.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "96496279": {
+  "requested": {
+   "latitude": 38.81083,
+   "longitude": -109.29417,
+   "start_date": "2024-12-08",
+   "end_date": "2025-12-16",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 38.800003,
+  "grid_longitude": -109.299995,
+  "elevation_m": 1246.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "96751415": {
+  "requested": {
+   "latitude": 38.79667,
+   "longitude": -109.195,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 38.800003,
+  "grid_longitude": -109.2,
+  "elevation_m": 1273.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "97532807": {
+  "requested": {
+   "latitude": 38.75333,
+   "longitude": -108.07833,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 38.800003,
+  "grid_longitude": -108.1,
+  "elevation_m": 1503.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "110911305": {
+  "requested": {
+   "latitude": 38.01,
+   "longitude": -110.07333,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 38.0,
+  "grid_longitude": -110.1,
+  "elevation_m": 1134.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "126377584": {
+  "requested": {
+   "latitude": 37.15083,
+   "longitude": -109.86667,
+   "start_date": "2024-11-26",
+   "end_date": "2025-12-04",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 37.200005,
+  "grid_longitude": -109.9,
+  "elevation_m": 1284.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "129078768": {
+  "requested": {
+   "latitude": 37.00083,
+   "longitude": -109.03,
+   "start_date": "2022-11-07",
+   "end_date": "2023-11-15",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 37.0,
+  "grid_longitude": -109.0,
+  "elevation_m": 1407.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "131520862": {
+  "requested": {
+   "latitude": 36.865,
+   "longitude": -111.5875,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 36.9,
+  "grid_longitude": -111.6,
+  "elevation_m": 953.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "133114453": {
+  "requested": {
+   "latitude": 36.77667,
+   "longitude": -108.68333,
+   "start_date": "2022-11-06",
+   "end_date": "2023-11-14",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 36.800003,
+  "grid_longitude": -108.7,
+  "elevation_m": 1488.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "134075067": {
+  "requested": {
+   "latitude": 36.72333,
+   "longitude": -108.225,
+   "start_date": "2020-09-27",
+   "end_date": "2021-10-05",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 36.700005,
+  "grid_longitude": -108.2,
+  "elevation_m": 1600.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "151170041": {
+  "requested": {
+   "latitude": 35.77333,
+   "longitude": -113.36333,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 35.800003,
+  "grid_longitude": -113.4,
+  "elevation_m": 445.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "186559442": {
+  "requested": {
+   "latitude": 33.8075,
+   "longitude": -111.66167,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 33.800003,
+  "grid_longitude": -111.7,
+  "elevation_m": 487.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ },
+ "203177183": {
+  "requested": {
+   "latitude": 32.88417,
+   "longitude": -114.4675,
+   "start_date": "2025-09-24",
+   "end_date": "2026-10-02",
+   "hourly": "temperature_2m",
+   "timezone": "GMT",
+   "models": "era5_land"
+  },
+  "grid_latitude": 32.9,
+  "grid_longitude": -114.5,
+  "elevation_m": 55.0,
+  "hours": 8976,
+  "missing_hours": 0,
+  "units": "\u00b0C"
+ }
+}

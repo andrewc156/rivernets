@@ -81,3 +81,9 @@ data/usgs/history_raw/
 data/benchmark_data_history/
 rain_parts/
 daymet_parts/
+dosat_parts/
+tailwater_parts/
+runoff_parts/
+phdiel_parts/
+blend_parts/
+airtemp_parts/
