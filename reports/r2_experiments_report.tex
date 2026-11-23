@@ -17,7 +17,7 @@
 \newcommand{\code}[1]{{\ttfamily\let\_\codeus #1}}
 
 \title{New Features for the Water-Quality Benchmark:\\
-       First Four of Six Experiments}
+       First Five of Six Experiments}
 \author{Andrew Chincea \\ TDA Lab}
 \date{November 2026}
 
@@ -27,9 +27,8 @@
 \begin{abstract}
 Six features or models not tried before were added to \code{water\_quality\_model\_benchmark.py}
 as opt-in options and run on the server, each as two paired arms on identical rows (without and
-with the new feature). Four have finished and are reported here; the conductance runoff signal for
-turbidity and the graph--gradient-boosting blend are still running. Each of the four improves at
-least one target with a station-bootstrap interval that excludes zero. (1) \textbf{DO saturation} (Benson--Krause, from the
+with the new feature). Five have finished and are reported here; the graph--gradient-boosting
+blend is still running. Each of the five improves at least one target with a station-bootstrap interval that excludes zero. (1) \textbf{DO saturation} (Benson--Krause, from the
 station's water temperature and elevation) with the diel part of water temperature raises DO
 $R^2$ by $0.03$--$0.06$ for every model (graph $0.700\to0.742$). (2) \textbf{ERA5-Land air
 temperature} raises water-temperature $R^2$ by $0.03$ for every model, at 22 of 24 stations
@@ -39,9 +38,13 @@ Bartlett and Glen Canyon Dams, but they \emph{wreck} DO and pH: the inner loop t
 in the folds where one of those two stations is held out, so the terms then rest on a single
 tailwater station and fail on the other. They must be offered for water temperature only.
 (4) The \textbf{diel part of water temperature} raises pH by $0.03$ (graph $0.062\to0.090$, on 18
-of the 19 pH stations). Air temperature fixes water-temperature errors at the 1--15-day scale
-and tailwater terms fix the seasonal scale, so the two should add up; a combined run is the
-natural next step.
+of the 19 pH stations). (5) A \textbf{runoff signal from the station's own conductance sensor}
+(the drop below its 7-day median and its 6-hour change) raises turbidity $R^2$ for gradient
+boosting from $0.342$ to $0.650$, the largest gain of all, but does nothing reliable for the
+linear and graph models. Most of that gain comes from two San Juan stations with only six days
+of record each; without them gradient boosting still gains $0.21$ (interval $0.06$--$0.40$).
+Air temperature fixes water-temperature errors at the 1--15-day scale and tailwater terms fix
+the seasonal scale, so the two should add up; a combined run is the natural next step.
 \end{abstract}
 
 % =====================================================================
@@ -59,8 +62,8 @@ benchmark and is run twice on the server, on identical rows and folds:
 The arms are compared with \code{compare\_runs.py}: $\Delta R^2$ is the change, the 95\% interval
 resamples stations with the predictions held fixed (so it leaves out the variability of the
 inner-loop choices), and better/worse counts the stations whose mean squared error fell/rose.
-Intervals that exclude zero are in bold. Gradient boosting and random forests were left out of
-these four runs. The comparison tables, per-station results and the time-scale split are in
+Intervals that exclude zero are in bold. Gradient boosting was run only in the runoff experiment,
+since it is turbidity's best model; random forests were left out. The comparison tables, per-station results and the time-scale split are in
 \code{results/r2\_experiments/}.
 
 \begin{table}[h]
@@ -78,7 +81,7 @@ DO saturation      & \code{BENCHMARK\_DOSAT}     & \code{do\_sat}, \code{wt\_die
 Air temperature    & \code{BENCHMARK\_AIRTEMP}   & \code{at\_1h}, \code{at\_24h}, \code{at\_72h}, \code{at\_168h} & water temp., DO & done \\
 Dam tailwater      & \code{BENCHMARK\_TAILWATER} & \code{tw\_tail}, $\times$ 2 annual harmonics & WT, DO, SC, pH & done \\
 Diel temperature   & \code{BENCHMARK\_PHDIEL}    & \code{wt\_diel}                         & pH                  & done \\
-Runoff signal      & \code{BENCHMARK\_RUNOFF}    & \code{sc\_anom}, \code{sc\_d6}, \code{sc\_mean\_log} & turbidity & running \\
+Runoff signal      & \code{BENCHMARK\_RUNOFF}    & \code{sc\_anom}, \code{sc\_d6}, \code{sc\_mean\_log} & turbidity & done \\
 Graph--GB blend    & \code{BENCHMARK\_BLEND}     & weight chosen in the inner loop         & all five            & running \\
 \bottomrule
 \end{tabular}
@@ -87,8 +90,10 @@ Graph--GB blend    & \code{BENCHMARK\_BLEND}     & weight chosen in the inner lo
 \begin{table}[h]
 \centering
 \small
-\caption{Summary for the graph model (Graph-Laplacian). Main benchmark $R^2$ for reference:
-water temperature $0.863$, DO $0.700$, specific conductance $0.385$, pH $0.117$ (19 stations).}
+\caption{Summary for the graph model (Graph-Laplacian), and for turbidity also gradient boosting
+(GB), its best model. Main benchmark $R^2$ for reference: water temperature $0.863$, DO $0.700$,
+specific conductance $0.385$, pH $0.117$ (19 stations), turbidity $0.104$ (GB $0.391$; the
+runoff arms use $1{,}350$ fewer rows).}
 \label{tab:summary}
 \begin{tabular}{l l rrrcc}
 \toprule
@@ -102,6 +107,8 @@ Dam tailwater    & Water temp. & $0.863$ & $0.912$ & $\mathbf{+0.048}$ & ($0.01$
                  & Spec.\ cond.& $0.385$ & $0.368$ & $-0.017$ & ($-0.10$, $0.02$) & 7/10 \\
                  & pH          & $0.117$ & $0.024$ & $-0.093$ & ($-0.36$, $0.00$) & 0/1 \\
 Diel temperature & pH (18 st.) & $0.062$ & $0.090$ & $\mathbf{+0.028}$ & ($0.01$, $0.05$) & 13/5 \\
+Runoff signal    & Turbidity   & $0.114$ & $0.128$ & $+0.015$ & ($-0.20$, $0.08$) & 6/10 \\
+                 & Turbidity, GB & $0.342$ & $0.650$ & $\mathbf{+0.309}$ & ($0.16$, $0.36$) & 14/3 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -339,7 +346,7 @@ pH            & Graph-Laplacian & $0.062$ & $0.090$ & $\mathbf{+0.028}$ & ($0.01
 % =====================================================================
 \section{What each feature fixes}\label{sec:scales}
 
-Each station's error series was split into its level (the mean error), a slow part (15-day
+For the four graph-model experiments above, each station's error series was split into its level (the mean error), a slow part (15-day
 centred mean minus the level), a 1--15-day part (24-hour minus 15-day mean) and a sub-daily part.
 Figure~\ref{fig:timescales} shows each part's share of the pooled variance, so the bars of one
 arm add up to about $1-R^2$ (the small cross terms are left out). Figure~\ref{fig:perstation}
@@ -366,12 +373,100 @@ temperature hurts most, is the one tailwater terms help second most.}
 \end{figure}
 
 % =====================================================================
+\section{Conductance runoff signal for turbidity}\label{sec:runoff}
+
+\paragraph{Feature.} Storm runoff dilutes river water, so specific conductance drops while
+sediment, and with it turbidity, rises. From the station's own conductance record (never from
+turbidity): \code{sc\_anom}, log conductance minus the log of its trailing 7-day median, and
+\code{sc\_d6}, the change in log conductance over the last 6 hours (``$+$R''), optionally with
+\code{sc\_mean\_log}, the station's mean log conductance (``$+$RM''). Both arms keep only
+turbidity rows with all three ($89{,}493$ of $90{,}843$, all 17 stations). Gradient boosting was
+included because it is turbidity's best model in the main benchmark.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Conductance runoff signal for turbidity: paired $\Delta R^2$ (17 stations, 89{,}493
+rows), and the same comparison without the two six-day San Juan records (15 stations).}
+\label{tab:runoff}
+\begin{tabular}{ll rrrcc}
+\toprule
+Stations & Model & Without & With & $\Delta R^2$ & Interval & Better/worse \\
+\midrule
+All 17        & Graph-Laplacian   & $0.114$ & $0.128$ & $+0.015$ & ($-0.20$, $0.08$) & 6/10 \\
+              & OLS               & $0.170$ & $0.166$ & $-0.004$ & ($-0.31$, $0.07$) & 5/11 \\
+              & Ridge             & $0.170$ & $0.176$ & $+0.006$ & ($-0.26$, $0.08$) & 5/11 \\
+              & Elastic Net       & $0.170$ & $0.174$ & $+0.004$ & ($-0.27$, $0.07$) & 5/11 \\
+              & Spline GAM        & $0.113$ & $0.222$ & $+0.109$ & ($-0.24$, $0.18$) & 8/9 \\
+              & Gradient Boosting & $0.342$ & $0.650$ & $\mathbf{+0.309}$ & ($0.16$, $0.36$) & 14/3 \\
+\addlinespace
+Without       & Graph-Laplacian   & $-0.468$ & $-0.577$ & $-0.108$ & ($-0.42$, $0.09$) & 5/10 \\
+09368000,     & OLS               & $-0.168$ & $-0.382$ & $\mathbf{-0.214}$ & ($-0.59$, $-0.03$) & 4/11 \\
+09371010      & Ridge             & $-0.167$ & $-0.340$ & $\mathbf{-0.172}$ & ($-0.49$, $-0.00$) & 4/11 \\
+(15)          & Elastic Net       & $-0.168$ & $-0.346$ & $\mathbf{-0.179}$ & ($-0.50$, $-0.01$) & 4/11 \\
+              & Spline GAM        & $-0.256$ & $-0.385$ & $-0.129$ & ($-0.46$, $0.05$) & 6/9 \\
+              & Gradient Boosting & $0.002$ & $0.214$ & $\mathbf{+0.212}$ & ($0.06$, $0.40$) & 12/3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Gradient boosting: the largest gain of all five experiments.} It took
+        \code{sc\_anom} and \code{sc\_d6} in all 17 folds (never \code{sc\_mean\_log}) and
+        improves 14 of 17 stations. Its error falls most at the 1--15-day scale (share
+        $0.301\to0.137$, storm events), and also in the station level ($0.057\to0.014$) and the
+        sub-daily part ($0.194\to0.143$; Figure~\ref{fig:runoff}).
+  \item \textbf{Most of it comes from two very short records.} 09368000 and 09371010, two San
+        Juan River stations, have only $111$ and $103$ hours of turbidity (11--17 September 2023)
+        with a mean near $1{,}000$\,FNU, almost four times that of any other station (the next is
+        $274$\,FNU). With equal station
+        weights they give $0.145$ and $0.115$ of the $0.309$. Without them, gradient boosting
+        still gains $0.212$ ($0.002\to0.214$), at 12 of 15 stations, with an interval that
+        excludes zero; the next largest gains are 09365000 and 09315000. So the signal is real,
+        but its size on all 17 stations mostly reflects six days of one storm on the San Juan.
+  \item \textbf{The two stations also drive turbidity $R^2$ itself.} Without them, gradient
+        boosting's baseline $R^2$ falls from $0.342$ to $0.002$ and every other model's is
+        negative: their high mean dominates the between-station variance that $R^2$ is measured
+        against. The main benchmark contains the same two records, so its turbidity numbers depend
+        on them in the same way; this is worth stating whenever turbidity $R^2$ is quoted.
+  \item \textbf{Linear and graph models: no gain, and worse without the two stations.} They take
+        the features in 16 or 17 of 17 folds (the linear models mostly with \code{sc\_mean\_log}) but
+        gain nothing reliable on 17 stations, and on the other 15 OLS, Ridge and Elastic Net lose
+        $0.17$--$0.21$. Among the stations that get worse are clear-water ones (09085000 and
+        09071750, mean turbidity below $7$\,FNU), where Ridge's error grows three- to four-fold. A likely reason: in the
+        upper basin, snowmelt dilutes conductance every spring without bringing much sediment,
+        so a drop in conductance means a storm at some stations and only meltwater at others. A
+        single linear coefficient cannot tell these apart; gradient boosting can combine the
+        signal with season and station attributes.
+  \item The two runoff features use only past readings, so unlike \code{wt\_diel} they would work
+        in real time. They do, however, require a conductance sensor at the station. The turbidity
+        models so far used only season and static attributes; the other targets already use
+        in-situ sensors (water temperature uses conductance; DO uses both), so this stays within
+        the benchmark's setting but narrows where the turbidity model applies.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/r2exp_runoff.pdf}
+\caption{Runoff signal, gradient boosting, turbidity. Left: each station's contribution to
+$\Delta R^2$; the two San Juan stations with six-day records give $0.26$ of the $0.31$. Right:
+error by time scale without (gray) and with (blue) the runoff signal; the largest drop is at
+1--15 days, the scale of storm events.}
+\label{fig:runoff}
+\end{figure}
+
+% =====================================================================
 \section{Conclusions and next runs}\label{sec:conclusions}
 
 \begin{itemize}
-  \item \textbf{Keep three of the four.} DO saturation for DO, air temperature for water
+  \item \textbf{Keep three of the first four.} DO saturation for DO, air temperature for water
         temperature (and DO, where it adds a little), the diel term for pH. Each gain holds for
         the graph model with an interval that excludes zero, and is spread across stations.
+  \item \textbf{Runoff signal: keep it for gradient boosting on turbidity.} It gives the largest
+        gain of all ($0.342\to0.650$; $+0.21$ without the two six-day San Juan records), but
+        only for gradient boosting; the linear and graph models should not be offered it. Report
+        turbidity $R^2$ with and without 09368000 and 09371010, since those two records decide
+        most of it.
   \item \textbf{Tailwater terms: water temperature only.} They give the largest water-temperature
         gain, but for DO and pH they fail whenever one of the two tailwater stations is held
         out, and they do not help the graph model on specific conductance.
@@ -385,9 +480,9 @@ temperature hurts most, is the one tailwater terms help second most.}
         temperature would keep 09371010 and make the pH result comparable with $0.117$.
   \item \textbf{Real-time use.} \code{wt\_diel} uses a centred window; a trailing 24-hour window
         would be needed if the model is ever run in real time.
-  \item \textbf{Still running.} The conductance runoff signal for turbidity (with gradient
-        boosting) and the graph--GB blend for all five targets will be added when their results
-        are in.
+  \item \textbf{Still running.} The graph--GB blend for all five targets will be added when its
+        results are in. For turbidity it should be compared with the gradient boosting of this
+        runoff run, which is now far ahead of the graph model.
 \end{itemize}
 
 The new results do not replace the main benchmark numbers on the poster, which were fixed before
