@@ -1,0 +1,312 @@
+===== part: Turbidity, linear =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/runoff_parts/on/turbidity/linear
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Runoff (on): turbidity rows restricted to node-hours with runoff features: stations 17 -> 17 | rows 90,843 -> 89,493 | rows per station min 103, median 5,193
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 27 | predictors in union: 22
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Turbidity']
+Models: ['Dummy', 'OLS', 'Ridge', 'Elastic Net', 'Spline GAM', 'Graph-Laplacian']
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+
+Target: Turbidity
+Nodes: 17
+Rows: 89,493
+Feature candidates: 27
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 93300040Outer fold 10/17 | test 93392084Outer fold 11/17 | test 96496279Outer fold 12/17 | test 97532807Outer fold 13/17 | test 126377584Outer fold 14/17 | test 129078768Outer fold 15/17 | test 131520862Outer fold 16/17 | test 133114453Outer fold 17/17 | test 134075067
+
+Saved: Turbidity
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     17 89493  0.222046 533.942735
+Turbidity           Ridge     17 89493  0.175546 549.668542
+Turbidity     Elastic Net     17 89493  0.174156 550.131697
+Turbidity             OLS     17 89493  0.166093 552.810527
+Turbidity Graph-Laplacian     17 89493  0.128212 565.227293
+Turbidity           Dummy     17 89493 -0.034519 615.725112
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     17 89493  0.222046 533.942735
+Turbidity           Ridge     17 89493  0.175546 549.668542
+Turbidity     Elastic Net     17 89493  0.174156 550.131697
+Turbidity             OLS     17 89493  0.166093 552.810527
+Turbidity Graph-Laplacian     17 89493  0.128212 565.227293
+Turbidity           Dummy     17 89493 -0.034519 615.725112
+Saved master metrics.
+Prediction rows: 536,958
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+   target           model               features  outer_folds
+Turbidity           Dummy             configured           17
+Turbidity     Elastic Net K=4 | local_slope + RM           13
+Turbidity     Elastic Net        K=4 | none + RM            2
+Turbidity     Elastic Net             K=4 | none            1
+Turbidity     Elastic Net     K=4 | reduced + RM            1
+Turbidity Graph-Laplacian  K=4 | local_slope + R           10
+Turbidity Graph-Laplacian         K=4 | none + R            4
+Turbidity Graph-Laplacian             K=4 | none            1
+Turbidity Graph-Laplacian        K=4 | none + RM            1
+Turbidity Graph-Laplacian      K=4 | reduced + R            1
+Turbidity             OLS K=4 | local_slope + RM           13
+Turbidity             OLS        K=4 | none + RM            2
+Turbidity             OLS             K=4 | none            1
+Turbidity             OLS     K=4 | reduced + RM            1
+Turbidity           Ridge K=4 | local_slope + RM           13
+Turbidity           Ridge        K=4 | none + RM            2
+Turbidity           Ridge             K=4 | none            1
+Turbidity           Ridge     K=4 | reduced + RM            1
+Turbidity      Spline GAM         K=4 | none + R           15
+Turbidity      Spline GAM        K=4 | none + RM            1
+Turbidity      Spline GAM     K=4 | reduced + RM            1
+Saved configs.
+
+R2 TABLE
+
+Model         Dummy  Elastic Net  Graph-Laplacian       OLS     Ridge  Spline GAM
+Target                                                                           
+Turbidity -0.034519     0.174156         0.128212  0.166093  0.175546    0.222046
+
+RMSE TABLE
+
+Model           Dummy  Elastic Net  Graph-Laplacian         OLS       Ridge  Spline GAM
+Target                                                                                 
+Turbidity  615.725112   550.131697       565.227293  552.810527  549.668542  533.942735
+
+BEST CONVENTIONAL MODELS
+
+   Target      Model  Nodes  Rows       R2       RMSE
+Turbidity Spline GAM     17 89493 0.222046 533.942735
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+     Parameters  Outer folds
+ {'alpha': 1.0}           13
+{'alpha': 0.03}            2
+ {'alpha': 3.0}            2
+
+ Elastic Net
+                        Parameters  Outer folds
+   {'alpha': 0.1, 'l1_ratio': 0.5}           14
+{'alpha': 0.001, 'l1_ratio': 0.25}            2
+  {'alpha': 1.0, 'l1_ratio': 0.75}            1
+
+ Spline GAM
+                   Parameters  Outer folds
+ {'n_knots': 6, 'alpha': 1.0}           14
+{'n_knots': 6, 'alpha': 10.0}            3
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+FINAL TABLE
+
+   Target           Model  Nodes  Rows        R2       RMSE
+Turbidity      Spline GAM     17 89493  0.222046 533.942735
+Turbidity           Ridge     17 89493  0.175546 549.668542
+Turbidity     Elastic Net     17 89493  0.174156 550.131697
+Turbidity             OLS     17 89493  0.166093 552.810527
+Turbidity Graph-Laplacian     17 89493  0.128212 565.227293
+Turbidity           Dummy     17 89493 -0.034519 615.725112
+Finished.
+===== part: Turbidity, gb =====
+Benchmark data: /home/achincea/rivernets/making_the_graph/rivernets-github/data/benchmark_data
+Results: /home/achincea/rivernets/making_the_graph/rivernets-github/runoff_parts/on/turbidity/gb
+Feature selection: inner | search: two_stage | K: [1, 2, 4] | static: ['none', 'local_slope', 'reduced'] | inner stride: 1
+all_static_df.pkl FOUND
+fourier_interaction_df.pkl FOUND
+static_node_df.pkl FOUND
+all_static_df: (225339, 32)
+fourier_interaction_df: (225339, 43)
+static_node_df: (67401, 8)
+Graph settings loaded.
+Dam Glen Canyon: on the network (0.05 km)
+Dam Hoover: on the network (0.06 km)
+Dam Davis: on the network (0.18 km)
+Dam Parker: on the network (0.04 km)
+Dam Flaming Gorge: on the network (0.06 km)
+Dam Fontenelle: on the network (0.17 km)
+Dam Blue Mesa: off the network (18 km), skipped
+Dam Navajo: off the network (21 km), skipped
+Dam McPhee: off the network (67 km), skipped
+Dam Granby: off the network (116 km), skipped
+Dam Dillon: off the network (85 km), skipped
+Dam Theodore Roosevelt: on the network (0.08 km)
+Dam Coolidge: on the network (0.23 km)
+Graph lambda grid: [0.0001, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0]
+Graph averaging: top 1
+Graph hyperparameter choice: loo | varying columns: []
+Graph log-target candidates: []
+Graph-Laplacian: 6 weightings ['distance_only', 'area', 'width', 'slope', 'area_width', 'unweighted_compressed'] | 26 WQ nodes
+Detected temperature interaction terms: 16
+interaction_hsin1_ysin
+interaction_hsin1_ycos
+interaction_hcos1_ysin
+interaction_hcos1_ycos
+interaction_hsin2_ysin
+interaction_hsin2_ycos
+interaction_hcos2_ysin
+interaction_hcos2_ycos
+interaction_hsin3_ysin
+interaction_hsin3_ycos
+interaction_hcos3_ysin
+interaction_hcos3_ycos
+interaction_hsin4_ysin
+interaction_hsin4_ycos
+interaction_hcos4_ysin
+interaction_hcos4_ycos
+Temperature dataframe: (225339, 47)
+
+Runoff (on): turbidity rows restricted to node-hours with runoff features: stations 17 -> 17 | rows 90,843 -> 89,493 | rows per station min 103, median 5,193
+Water temperature OK | feature candidates: 10 | predictors in union: 36
+DO concentration OK | feature candidates: 9 | predictors in union: 21
+Specific conductance OK | feature candidates: 10 | predictors in union: 20
+pH OK | feature candidates: 9 | predictors in union: 20
+Turbidity OK | feature candidates: 27 | predictors in union: 22
+Ridge grid: [0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+Targets: ['Turbidity']
+Models: ['Gradient Boosting']
+
+================================================================================
+STARTING: Turbidity
+================================================================================
+
+Target: Turbidity
+Nodes: 17
+Rows: 89,493
+Feature candidates: 27
+Outer fold 1/17 | test 67739434Outer fold 2/17 | test 81497938Outer fold 3/17 | test 82982643Outer fold 4/17 | test 83027786Outer fold 5/17 | test 83222751Outer fold 6/17 | test 84197086Outer fold 7/17 | test 88786999Outer fold 8/17 | test 90706215Outer fold 9/17 | test 93300040Outer fold 10/17 | test 93392084Outer fold 11/17 | test 96496279Outer fold 12/17 | test 97532807Outer fold 13/17 | test 126377584Outer fold 14/17 | test 129078768Outer fold 15/17 | test 131520862Outer fold 16/17 | test 133114453Outer fold 17/17 | test 134075067
+
+Saved: Turbidity
+   Target             Model  Nodes  Rows       R2      RMSE
+Turbidity Gradient Boosting     17 89493 0.650415 357.92657
+   Target             Model  Nodes  Rows       R2      RMSE
+Turbidity Gradient Boosting     17 89493 0.650415 357.92657
+Saved master metrics.
+Prediction rows: 89,493
+Saved tuning results.
+
+FEATURE SETS CHOSEN (outer folds)
+
+   target             model              features  outer_folds
+Turbidity Gradient Boosting        K=4 | none + R            6
+Turbidity Gradient Boosting        K=1 | none + R            5
+Turbidity Gradient Boosting K=4 | local_slope + R            5
+Turbidity Gradient Boosting        K=2 | none + R            1
+Saved configs.
+
+R2 TABLE
+
+Model      Gradient Boosting
+Target                      
+Turbidity           0.650415
+
+RMSE TABLE
+
+Model      Gradient Boosting
+Target                      
+Turbidity          357.92657
+
+BEST CONVENTIONAL MODELS
+
+   Target             Model  Nodes  Rows       R2      RMSE
+Turbidity Gradient Boosting     17 89493 0.650415 357.92657
+
+================================================================================
+Turbidity
+================================================================================
+
+ Ridge
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Elastic Net
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Spline GAM
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Random Forest
+Empty DataFrame
+Columns: [Parameters, Outer folds]
+Index: []
+
+ Gradient Boosting
+                                                                              Parameters  Outer folds
+ {'learning_rate': 0.1, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            6
+{'learning_rate': 0.05, 'max_iter': 200, 'max_leaf_nodes': 15, 'l2_regularization': 0.0}            6
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 31, 'l2_regularization': 1.0}            3
+{'learning_rate': 0.05, 'max_iter': 300, 'max_leaf_nodes': 15, 'l2_regularization': 1.0}            2
+
+FINAL TABLE
+
+   Target             Model  Nodes  Rows       R2      RMSE
+Turbidity Gradient Boosting     17 89493 0.650415 357.92657
+Finished.
+merged 1 targets (2 parts) into results/benchmark_results_runoff_on: 7 metric rows, 626,451 prediction rows
+Finished.
