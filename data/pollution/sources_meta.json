@@ -1,0 +1,42 @@
+{
+ "downloaded": "2026-11-22",
+ "echo_huc2": [
+  "14",
+  "15"
+ ],
+ "osm_box": "30.5,-116.5,43.6,-104.8",
+ "streamcat_metrics": [
+  "npdesdens",
+  "wwtpalldens",
+  "wwtpmajordens",
+  "tridens",
+  "superfunddens",
+  "minedens",
+  "coalminedens",
+  "damdens",
+  "canaldens",
+  "popden2010",
+  "huden2010",
+  "rddens",
+  "septic",
+  "pctimp2019",
+  "pcturbhi2019",
+  "pcturbmd2019",
+  "pcturblo2019",
+  "pcturbop2019",
+  "pctcrop2019",
+  "pcthay2019",
+  "pctbl2019",
+  "fert",
+  "manure",
+  "nani",
+  "n_usgsww_2012",
+  "waterinput",
+  "chem",
+  "pctburnarea2014",
+  "pctburnarea2015",
+  "pctburnarea2016",
+  "pctburnarea2017",
+  "pctburnarea2018"
+ ]
+}
