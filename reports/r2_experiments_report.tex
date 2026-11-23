@@ -17,7 +17,7 @@
 \newcommand{\code}[1]{{\ttfamily\let\_\codeus #1}}
 
 \title{New Features for the Water-Quality Benchmark:\\
-       First Five of Six Experiments}
+       Six Experiments}
 \author{Andrew Chincea \\ TDA Lab}
 \date{November 2026}
 
@@ -27,8 +27,7 @@
 \begin{abstract}
 Six features or models not tried before were added to \code{water\_quality\_model\_benchmark.py}
 as opt-in options and run on the server, each as two paired arms on identical rows (without and
-with the new feature). Five have finished and are reported here; the graph--gradient-boosting
-blend is still running. Each of the five improves at least one target with a station-bootstrap interval that excludes zero. (1) \textbf{DO saturation} (Benson--Krause, from the
+with the new feature). All six are reported here. Each of the first five improves at least one target with a station-bootstrap interval that excludes zero. (1) \textbf{DO saturation} (Benson--Krause, from the
 station's water temperature and elevation) with the diel part of water temperature raises DO
 $R^2$ by $0.03$--$0.06$ for every model (graph $0.700\to0.742$). (2) \textbf{ERA5-Land air
 temperature} raises water-temperature $R^2$ by $0.03$ for every model, at 22 of 24 stations
@@ -45,6 +44,10 @@ linear and graph models. Most of that gain comes from two San Juan stations with
 of record each; without them gradient boosting still gains $0.21$ (interval $0.06$--$0.40$).
 Air temperature fixes water-temperature errors at the 1--15-day scale and tailwater terms fix
 the seasonal scale, so the two should add up; a combined run is the natural next step.
+(6) A \textbf{graph--gradient-boosting blend}, with the weight chosen in the inner loop, is the best
+DO model ($0.748$, against $0.700$ for the graph model and $0.733$ for gradient boosting) and lifts
+turbidity from $0.104$ to $0.381$, close to gradient boosting alone ($0.391$); it gains nothing for
+water temperature or specific conductance and loses $0.11$ for pH, mostly at Lees Ferry.
 \end{abstract}
 
 % =====================================================================
@@ -62,8 +65,8 @@ benchmark and is run twice on the server, on identical rows and folds:
 The arms are compared with \code{compare\_runs.py}: $\Delta R^2$ is the change, the 95\% interval
 resamples stations with the predictions held fixed (so it leaves out the variability of the
 inner-loop choices), and better/worse counts the stations whose mean squared error fell/rose.
-Intervals that exclude zero are in bold. Gradient boosting was run only in the runoff experiment,
-since it is turbidity's best model; random forests were left out. The comparison tables, per-station results and the time-scale split are in
+Intervals that exclude zero are in bold. Gradient boosting was run only in the runoff and blend
+experiments, since it is turbidity's best model; random forests were left out. The comparison tables, per-station results and the time-scale split are in
 \code{results/r2\_experiments/}.
 
 \begin{table}[h]
@@ -82,7 +85,7 @@ Air temperature    & \code{BENCHMARK\_AIRTEMP}   & \code{at\_1h}, \code{at\_24h}
 Dam tailwater      & \code{BENCHMARK\_TAILWATER} & \code{tw\_tail}, $\times$ 2 annual harmonics & WT, DO, SC, pH & done \\
 Diel temperature   & \code{BENCHMARK\_PHDIEL}    & \code{wt\_diel}                         & pH                  & done \\
 Runoff signal      & \code{BENCHMARK\_RUNOFF}    & \code{sc\_anom}, \code{sc\_d6}, \code{sc\_mean\_log} & turbidity & done \\
-Graph--GB blend    & \code{BENCHMARK\_BLEND}     & weight chosen in the inner loop         & all five            & running \\
+Graph--GB blend    & \code{BENCHMARK\_BLEND}     & weight chosen in the inner loop         & all five            & done \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -109,6 +112,9 @@ Dam tailwater    & Water temp. & $0.863$ & $0.912$ & $\mathbf{+0.048}$ & ($0.01$
 Diel temperature & pH (18 st.) & $0.062$ & $0.090$ & $\mathbf{+0.028}$ & ($0.01$, $0.05$) & 13/5 \\
 Runoff signal    & Turbidity   & $0.114$ & $0.128$ & $+0.015$ & ($-0.20$, $0.08$) & 6/10 \\
                  & Turbidity, GB & $0.342$ & $0.650$ & $\mathbf{+0.309}$ & ($0.16$, $0.36$) & 14/3 \\
+Graph--GB blend  & DO          & $0.700$ & $0.748$ & $\mathbf{+0.048}$ & ($0.02$, $0.08$) & 13/4 \\
+                 & Turbidity   & $0.104$ & $0.381$ & $\mathbf{+0.277}$ & ($0.12$, $0.56$) & 13/4 \\
+                 & pH          & $0.117$ & $0.011$ & $-0.106$ & ($-0.28$, $0.02$) & 12/7 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -456,6 +462,56 @@ error by time scale without (gray) and with (blue) the runoff signal; the larges
 \end{figure}
 
 % =====================================================================
+\section{Graph--gradient-boosting blend}\label{sec:blend}
+
+\paragraph{Model.} The prediction is $w\,\hat y_{\text{graph}} + (1-w)\,\hat y_{\text{GB}}$, with $w$
+chosen from $0, 0.05, \ldots, 1$ by the same inner leave-one-station-out loop that tunes the two
+models, so the held-out station never sets it. The graph model and gradient boosting are those of
+the main benchmark; all three are in one run on identical rows, so the comparisons below are paired.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Graph--GB blend against each of its parts: paired $\Delta R^2$, and the graph weight $w$
+chosen across the outer folds (median, range).}
+\label{tab:blend}
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l c rrrc rrc}
+\toprule
+ & & \multicolumn{4}{c}{Blend vs graph model} & \multicolumn{3}{c}{Blend vs gradient boosting} \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-9}
+Target & $w$ & Graph & Blend & $\Delta R^2$ & Interval & GB & $\Delta R^2$ & Interval \\
+\midrule
+Water temp.  & $0.65$ ($0.35$--$0.70$) & $0.863$ & $0.861$ & $-0.003$ & ($-0.05$, $0.03$) & $0.833$ & $+0.028$ & ($-0.02$, $0.10$) \\
+DO           & $0.40$ ($0.35$--$0.50$) & $0.700$ & $0.748$ & $\mathbf{+0.048}$ & ($0.02$, $0.08$) & $0.733$ & $+0.015$ & ($-0.01$, $0.06$) \\
+Spec.\ cond. & $1.00$ ($0.90$--$1.00$) & $0.385$ & $0.377$ & $\mathbf{-0.008}$ & ($-0.02$, $-0.00$) & $-0.094$ & $\mathbf{+0.471}$ & ($0.26$, $1.09$) \\
+pH           & $0.65$ ($0.40$--$0.95$) & $0.117$ & $0.011$ & $-0.106$ & ($-0.28$, $0.02$) & $-0.171$ & $+0.182$ & ($-0.08$, $0.48$) \\
+Turbidity    & $0.20$ ($0.05$--$0.45$) & $0.104$ & $0.381$ & $\mathbf{+0.277}$ & ($0.12$, $0.56$) & $0.391$ & $-0.010$ & ($-0.08$, $0.06$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{DO: the best DO model so far.} The inner loop gives gradient boosting the larger
+        weight ($w\approx0.4$). The blend beats the graph model at 13 of 17 stations and edges
+        out gradient boosting ($+0.015$, within noise, with $87\%$ of that small gain from one
+        station). It is on par with the DO-saturation features ($0.742$ for the graph model,
+        $0.751$ for OLS), which could be combined with it.
+  \item \textbf{Turbidity: essentially gradient boosting.} With $w\approx0.2$ the blend reaches
+        $0.381$, close to gradient boosting's $0.391$. Of its $0.277$ gain over the graph model,
+        $0.19$ comes from the two six-day San Juan records (Section~\ref{sec:runoff}).
+  \item \textbf{Water temperature and specific conductance: the graph model alone.} For
+        specific conductance the loop puts almost all weight on the graph model ($w\approx1$),
+        and the small remaining weight costs $0.008$. For water temperature the blend is no better
+        than the graph model.
+  \item \textbf{pH: worse.} The inner loop gives gradient boosting a third of the weight,
+        but gradient boosting fails badly at a few stations: Lees Ferry alone costs $0.069$, and
+        Glenwood Springs and the Verde below Bartlett Dam $0.022$ each. Inner leave-one-out over
+        the remaining stations does not see this coming, the same weakness as with the tailwater
+        terms (Section~\ref{sec:tailwater}).
+\end{itemize}
+
+% =====================================================================
 \section{Conclusions and next runs}\label{sec:conclusions}
 
 \begin{itemize}
@@ -480,9 +536,10 @@ error by time scale without (gray) and with (blue) the runoff signal; the larges
         temperature would keep 09371010 and make the pH result comparable with $0.117$.
   \item \textbf{Real-time use.} \code{wt\_diel} uses a centred window; a trailing 24-hour window
         would be needed if the model is ever run in real time.
-  \item \textbf{Still running.} The graph--GB blend for all five targets will be added when its
-        results are in. For turbidity it should be compared with the gradient boosting of this
-        runoff run, which is now far ahead of the graph model.
+  \item \textbf{Blend: for DO and turbidity only.} It is the best DO model ($0.748$) and
+        nearly matches gradient boosting for turbidity, but adds nothing for water temperature or
+        specific conductance and loses $0.11$ for pH. Next: blend the graph model with the
+        runoff-signal gradient boosting for turbidity, and with DO saturation for DO.
 \end{itemize}
 
 The new results do not replace the main benchmark numbers on the poster, which were fixed before
