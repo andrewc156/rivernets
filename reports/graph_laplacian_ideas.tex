@@ -1,0 +1,114 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,tabularx,array,microtype}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\definecolor{river}{HTML}{205567}
+\newcommand{\kicker}[1]{\noindent{\small\sffamily\bfseries\color{river}#1}\par\smallskip}
+\newcommand{\idea}[2]{\par\addvspace{0.6\baselineskip}{\Large\bfseries #1.\enspace #2\par}\nobreak\smallskip}
+\newcommand{\test}{\textbf{Decisive comparison.}\enspace}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt minus 1pt}
+\setlength{\emergencystretch}{1.5em}
+\raggedbottom
+\hypersetup{pdftitle={Improving the Colorado River graph-Laplacian model},pdfsubject={Five research proposals for predicting water quality at held-out stations}}
+
+\begin{document}
+\kicker{TDA LAB\quad /\quad COLORADO RIVER WATER QUALITY}
+{\LARGE\bfseries Improving the graph-Laplacian model\par}
+\vspace{3pt}
+{\large Five proposals for prediction at held-out stations\par}
+\medskip
+
+\textbf{Start at a confluence.} Two gauges on different rivers at Glenwood Springs currently share one model offset. I would separate their reaches first, then test whether the river below a junction should resemble a mixture of its tributaries, rather than requiring the tributaries to resemble each other. This targets specific conductance, where the graph already earns its place. All scores below are from earlier reports; none of the proposed models has been fitted for this note.
+
+\subsection*{What the next idea has to beat}
+The current prediction at station node $i$ and hour $t$ is $\hat y_{it}=\beta_0+z_{it}^{\mathsf T}\beta+g_i$. The predictors $z_{it}$ describe conditions at the site; the offset $g_i$ borrows information through the river network. With no target observations at $i$, the usual Laplacian penalty makes its offset a weighted average of neighbouring offsets. Kron reduction already preserves this fit: using every river pixel instead is not an improvement~\cite{main,notes}.
+
+{\small\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\linewidth}{@{}l r >{\raggedright\arraybackslash}X@{}}
+\toprule
+Target & Graph $R^2$ & What earlier comparisons tell us \\ \midrule
+Specific conductance & 0.385 & Falls to $-0.241$ when a whole subbasin is held out. \\
+pH & 0.117 & Reaches $0.178$ with concurrent neighbour readings; the graph's paired interval includes zero. \\
+Water temperature & 0.863 & Adding air temperature gives $0.892$; adding tailwater seasonality instead gives $0.912$. Their combination is a proposed control, not a measured score. \\
+Dissolved oxygen (DO) & 0.700 & Adding saturation and diel water temperature gives $0.742$ for the graph and $0.751$ for ordinary least squares. A separate graph--boosting blend gives $0.748$. \\
+Turbidity & 0.104 & On the separate conductance-sensor subset, adding runoff features moves the graph from $0.114$ to $0.128$, but gradient boosting from $0.342$ to $0.650$. \\
+\bottomrule
+\end{tabularx}\par}
+{\footnotesize Reference column: pooled leave-one-station-node-out $R^2$ across 17--24 nodes per target, with equal weight per node, not the average of station-specific $R^2$ values. Comparisons are within their own rows and splits~\cite{main,experiments,notes}.}
+
+\subsection*{A map check before changing the model}
+The Roaring Fork gauge (USGS-09085000) and the Colorado gauge \emph{above} the Roaring Fork (USGS-393259107194801) both map to node 83222751, yet their NHDPlus reach identifiers differ~\cite{pollution,crosswalk}. An offset attached to that one node cannot distinguish the incoming rivers. Check the original station coordinates and flow paths without looking at chemistry. If confirmed, keep incoming gauges on distinct reaches and the junction downstream of both.
+
+Compare the two maps on the \emph{same original station-hour observations}, not old node averages versus new station labels. Hold the two gauges out together in both arms and keep their combined scoring weight fixed. Report local and rest-of-network errors separately: a map correction can be justified even if it changes little elsewhere.
+
+\newpage
+\kicker{SPECIFIC CONDUCTANCE\quad /\quad TWO DIFFERENT SOURCES OF ERROR}
+\idea{1}{Let tributaries differ before they mix}
+Suppose branches $a$ and $b$ enter junction $c$, and $p$ is the fraction of incoming flow from $a$. Write $m=p g_a+(1-p)g_b$. The usual pairwise penalty with those branch weights has two distinct effects:
+\[
+ p(g_a-g_c)^2+(1-p)(g_b-g_c)^2
+ = \underbrace{(g_c-m)^2}_{\text{departure from the mixture}}
+ +\underbrace{p(1-p)(g_a-g_b)^2}_{\text{difference between tributaries}}.
+\]
+Even when $g_c=m$, the second term charges the model for a salty tributary meeting a fresh one. Keep the mixing penalty but give the tributary-contrast penalty half its original weight at every mapped confluence. Leave every other reach alone. Fix this multiplier in advance rather than fitting one per junction. Use independent long-term flows for the share $p$ where available; test drainage-area shares separately as a proxy. This is a soft assumption about \emph{offsets}, not a claim that electrical conductance is conserved: the ionic composition matters~\cite{source2}.
+
+\test On the corrected map, compare (a) the existing unweighted compressed graph, (b) flow-weighted pairwise smoothing and (c) the same weights with the weaker tributary penalty. Form each penalty on the physical junctions \emph{before} reducing to station nodes. The new quadratic is nonnegative but can have positive off-diagonal entries; use its Schur complement without clipping those entries. Scale the reduced matrices the same way. The contrast (c) versus (b) isolates mixing from the change in weights. Look for smaller downstream bias at more than one junction. Counting confluences and replacing the Laplacian by a tail-up covariance were already tested; neither comparison isolates this term~\cite{main}.
+
+\idea{2}{Put mapped salt inputs into the mean prediction}
+One station, the Dolores near Cisco (USGS-09180000), accounts for about $60\%$ of the graph's squared conductance error; its mean prediction is low by about $1{,}000\,\mu\mathrm{S/cm}$~\cite{pollution}. A smoother can interpolate between known levels, but it has no input saying that brine enters the Dolores in Paradox Valley. The pollution report suggested a source flag. A stronger hypothesis predicts \emph{where the extra salt goes and how much it is diluted}.
+
+For each station, route independently estimated salt mass rates from mapped springs or brine inflows down the river. A spring discharge measurement paired with a dissolved-solids sample at the spring itself would qualify. Divide the arriving load by receiving flow over the same period; fit a single coefficient linking this concentration proxy to conductance. Keep $g_i$ for what the source map misses. Start with a seasonal or long-term level, not an hourly pulse. Where diversions or storage make the delivered load unknown, flag that reach rather than assuming full delivery.
+
+\test Compare the baseline, flow alone, a downstream source flag, and flow plus routed load on identical rows. Check signed bias at the Dolores, below Glenwood Springs, and on unexposed branches. Audit the load estimates: USGS inferred the Paradox Valley and combined Dotsero--Glenwood loads from gauges above and below the sources~\cite[Table~2]{source1}. Exclude any estimate derived from a held-out gauge, even in an earlier year. If independent loads are missing, test only the flag. If no training site is exposed, not even the flag effect can be estimated: use the baseline. An improvement confined to the Dolores is a useful local correction, not evidence of basin-wide transfer.
+
+\newpage
+\kicker{WHEN TO BORROW FROM OTHER STATIONS}
+\idea{3}{Let the graph back off on an unmonitored branch}
+On an unmonitored branch, a distant gauge can set the local offset. Is that why conductance fails under subbasin holdout~\cite{main,notes}? Penalize the size of offsets as well as their differences on the retained station nodes $B$:
+\[
+ \lambda\left[g^{\mathsf T}\widetilde Lg+\kappa\sum_{i\in B}g_i^2\right],\qquad \kappa\geq 0 .
+\]
+Here $\widetilde L$ is the existing scaled Kron matrix; $\kappa=0$ recovers the original. For an unobserved node linked only to an offset $a$ by an effective edge of weight $w$, the new offset is $wa/(w+\kappa)$ rather than $a$. A weak link can now defer to the covariate prediction. The extra penalty belongs on the retained nodes, not on every river pixel.
+
+\test Compare the current graph, a weak anchor, and the same regression without $g_i$. Rank sites by effective resistance to the nearest training station. Look for lower error at isolated sites under subbasin holdout without sacrificing well-connected sites under ordinary station holdout. If isolated sites do not improve, keep the original penalty.
+
+\idea{4}{Ask whether an upstream pH signal arrives late}
+Same-hour pH at nearby stations could reflect shared daylight rather than downstream transport. Rebuild the three-neighbour reference first: its inner loop reused the outer fold's donor features~\cite{main}. Remove each donor's expected seasonal and daily cycle using training data. Compare upstream anomalies \emph{now} with the same donors' anomalies \emph{one travel time ago}. Set lags from reach lengths and a common velocity rule checked against independent hydraulic data, not the held-out pH record~\cite{source3}.
+
+\test Compare no live input, the same-hour reference, and zero versus travel lag on identical upstream donors and hours. Skip routes with unknown reservoir transit times. On hours without donors, retain the baseline and report coverage. A win against no donors alone supports live readings, not the delay. This is a nowcast, not a map-only prediction.
+
+\idea{5}{For turbidity, smooth background rather than storm peaks}
+Upstream rain did not reliably improve turbidity; the local conductance drop helped boosting far more than it helped the additive graph fit~\cite{followup,experiments}. Define a pulse as turbidity above the station-weighted 90th percentile of the training data, recomputed in each fold. At prediction time, estimate pulse probability from the trailing conductance drop, its six-hour change, and season---never from local turbidity. Weight a graph-smoothed ordinary-hour mean and a pooled pulse mean by their respective probabilities. Unlike the earlier constant-weight blend, the graph has a specific job: predicting quiet days.
+
+\test Compare with the identical two-part model without $g_i$ and with runoff-feature boosting. Report ordinary-hour error and peak bias in addition to the overall score. Hold Shiprock and Four Corners out \emph{together}: their short records capture the same storm~\cite{experiments}. If the graph cannot beat the no-graph version on ordinary days, keep boosting.
+
+\newpage
+\kicker{HOW TO DECIDE}
+\section*{What would count as an improvement?}
+\textbf{Choose the claim before the split.} Use station holdout for interpolation, whole-subbasin holdout for geographic transfer, and a later, untouched period for confirmation. Choose predictors and penalty strengths by inner station holdout, never by their outer scores. For the primary paired comparison, both arms must see the same available inputs, test hours and stations, except for the specific change under test. If flow or a co-sensor limits coverage, give both the paired subset result and the coverage of the full intended deployment.
+
+\textbf{Keep the held-out target out of every step.} Rebuild donor pools, donor climatologies, event thresholds, and all fitted transformations within each inner split and again for each outer split. Exclude the prediction site from its own donor pool, including when constructing training features. Where several gauges share one physical site or benchmark node, keep the group together. For nowcasts use only data timestamped and available by the prediction hour; in particular, the earlier centred diel-temperature feature is not a real-time baseline~\cite{experiments}.
+
+\textbf{Make the gain interpretable.} Report paired changes in equal-node-weighted $R^2$ and root mean squared error in physical units. Name the sites that gained and lost most. Bootstrap stations, not hours; intervals with predictions held fixed omit tuning uncertainty~\cite{followup}. Show each held-out basin, conductance without the Dolores, and turbidity without the two short San Juan records alongside the full results~\cite{main,experiments}.
+
+\textbf{Order of work.} Verify the Glenwood mapping, then test the confluence penalty. Check for independent salt-load records before fitting a source effect. For temperature and DO, use the successful target-specific predictors as controls rather than starting another search over Laplacians~\cite{experiments}. Treat all findings on the previously inspected folds as exploratory.
+
+\begingroup\small
+\setlength{\parskip}{0pt}
+\renewcommand{\refname}{Evidence and further reading}
+\begin{thebibliography}{9}\setlength{\itemsep}{2pt}\setlength{\parskip}{0pt}
+\bibitem{main} TDA Lab, \emph{Kron-Reduced vs.\ Full Graph Laplacians for Water-Quality Regression on the Colorado River Network}. See ``Final model comparison,'' ``Other evaluation splits,'' and ``Upstream-watershed and neighbour-reading features.'' \nolinkurl{reports/kron_vs_full_laplacian_report.tex}.
+\bibitem{notes} TDA Lab, \emph{Final Benchmarks and Robustness of the Graph-Laplacian Water-Quality Model}, ``Robustness to the Evaluation Split.'' \nolinkurl{reports/Nov_12_meeting_notes.tex}.
+\bibitem{experiments} TDA Lab, \emph{New Features for the Water-Quality Benchmark: Six Experiments}. See the paired target tables and the San Juan sensitivity analysis. \nolinkurl{reports/r2_experiments_report.tex}.
+\bibitem{pollution} TDA Lab, \emph{Pollution Sources Upstream of the Stations, and Where the Benchmark Does Worst}. See the station error table, ``What could help,'' and ``Limitations.'' \nolinkurl{reports/pollution_sources_report.tex}.
+\bibitem{crosswalk} Station-to-reach crosswalk and USGS site names: \nolinkurl{data/pollution/station_comids.csv} and \nolinkurl{data/pollution/station_names.csv}.
+\bibitem{followup} TDA Lab, \emph{Follow-up Runs of the Water-Quality Benchmark on the Colorado River Network}, ``Setup'' and ``Conclusions so far.'' \nolinkurl{reports/followup_runs_report.tex}.
+\bibitem{source1} M. P. Miller et al. (2017), \href{https://pubs.usgs.gov/sir/2017/5009/sir20175009.pdf}{\emph{Enhanced and Updated Spatially Referenced Statistical Assessment of Dissolved-Solids Load Sources and Transport in Streams of the Upper Colorado River Basin}}. USGS SIR 2017--5009, Table~2.
+\bibitem{source2} R. B. McCleskey, D. K. Nordstrom, and J. N. Ryan (2012), \href{https://www.usgs.gov/publications/comparison-electrical-conductivity-calculation-methods-natural-waters}{``Comparison of electrical conductivity calculation methods for natural waters.''} \emph{Limnology and Oceanography: Methods}.
+\bibitem{source3} H. E. Jobson (1996), \href{https://pubs.usgs.gov/wri/1996/4013/report.pdf}{\emph{Prediction of Traveltime and Longitudinal Dispersion in Rivers and Streams}}. USGS Water-Resources Investigations Report 96--4013.
+\end{thebibliography}
+\endgroup
+\end{document}
